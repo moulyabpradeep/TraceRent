@@ -1,7 +1,7 @@
 import requests
 import ConfigConstants as config
 
-
+# add comments
 def getLocationResponse(location, params=None, headers=None):
     """
     Makes a GET request to the specified URL and returns the JSON response as an array.
