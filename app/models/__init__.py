@@ -1,6 +1,7 @@
-from .tenant import Tenant
-from .property import Property
+# Import individual model classes here
+from .tenant import TenantPersonalDetails
+#from .property import Property
 from .user import User
 
-# Optionally, you could import and set up the database connection here
-from .base import Base
+# Import the SQLAlchemy base instance for use in migrations or creating tables
+#from .base import Base

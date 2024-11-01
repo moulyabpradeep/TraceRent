@@ -3,7 +3,6 @@ CREATE DATABASE trace_rent_ai;
 USE trace_rent_ai;
 
 
-
 CREATE TABLE `tenant_personal_details` (
   `user_id` integer PRIMARY KEY,
   `name` varchar(255),
@@ -87,7 +86,7 @@ CREATE TABLE `amenities` (
   `pool` varchar(255)
 );
 
-CREATE TABLE `users` (
+CREATE TABLE `user` (
   `user_id` integer PRIMARY KEY,
   `username` varchar(255),
   `password` varchar(255)
@@ -110,9 +109,9 @@ CREATE TABLE `areas` (
 );
 
 
-ALTER TABLE `tenant_personal_details` ADD FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`);
+ALTER TABLE `tenant_personal_details` ADD FOREIGN KEY (`user_id`) REFERENCES `user` (`user_id`);
 
-ALTER TABLE `tenant_preference_details` ADD FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`);
+ALTER TABLE `tenant_preference_details` ADD FOREIGN KEY (`user_id`) REFERENCES `user` (`user_id`);
 
 ALTER TABLE `tenant_preference_details` ADD FOREIGN KEY (`tent_cat_id`) REFERENCES `tenant_category` (`tent_cat_id`);
 
@@ -122,7 +121,7 @@ ALTER TABLE `tenant_preferred_properties` ADD FOREIGN KEY (`prop_cat_id`) REFERE
 
 ALTER TABLE `property_Data` ADD FOREIGN KEY (`prop_cat_id`) REFERENCES `property_category` (`prop_cat_id`);
 
-ALTER TABLE `behaviour_data` ADD FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`);
+ALTER TABLE `behaviour_data` ADD FOREIGN KEY (`user_id`) REFERENCES `user` (`user_id`);
 
 ALTER TABLE `behaviour_data` ADD FOREIGN KEY (`prop_searched`) REFERENCES `property_Data` (`unit_id`);
 
@@ -134,7 +133,7 @@ ALTER TABLE `location` ADD FOREIGN KEY (`unit_id`) REFERENCES `property_Data` (`
 
 ALTER TABLE `amenities` ADD FOREIGN KEY (`unit_id`) REFERENCES `property_Data` (`unit_id`);
 
-ALTER TABLE `tenant_financial_preferences` ADD FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`);
+ALTER TABLE `tenant_financial_preferences` ADD FOREIGN KEY (`user_id`) REFERENCES `user` (`user_id`);
 
 -- Insert static data for tenant categories
 INSERT INTO tenant_category (tent_cat_id, tent_category) 

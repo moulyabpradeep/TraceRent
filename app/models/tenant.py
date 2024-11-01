@@ -5,7 +5,7 @@ from app.database import Base
 from app.global_constants import (  # Importing from constants
     TENANT_PERSONAL_DETAILS_TABLE,
     TENANT_PREFERENCE_DETAILS_TABLE,
-    TENANT_CATEGORY_TABLE,
+    TENANT_CATEGORY_TABLE
 )
 
 class TenantPersonalDetails(Base):
