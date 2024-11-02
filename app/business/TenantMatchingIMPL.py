@@ -1,5 +1,5 @@
 import math
-import TraceRentAPIInvoker as tcapi
+from app.routes import TraceRentAPIInvoker as tcapi
 
 
 def calculate_distance(ref_point, target_point):
