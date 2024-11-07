@@ -21,9 +21,8 @@ class UserPreferences:
     session_id: Optional[str] = None
 
     @staticmethod
-    def from_json(json_str: str) -> 'UserPreferences':
-        data = json.loads(json_str)
-        return UserPreferences(**data)
+    def from_json(json_data: dict) -> 'UserPreferences':
+        return UserPreferences(**json_data)
 
 
 @dataclass
@@ -54,6 +53,10 @@ class PropertyObject:
     points: Optional[int] = None
     percent_close: Optional[int] = None
     distance: Optional[int] = None
+    school_proximity_points: Optional[int] = None
+    hospital_proximity_points: Optional[int] = None
+    transit_proximity_points: Optional[int] = None
+    max_points: Optional[int] = None
 
     @staticmethod
     def from_json(json_str: str) -> 'PropertyObject':
