@@ -1,14 +1,23 @@
 import math
 from app.routes import TraceRentAPIInvoker as tcapi
 from collections import defaultdict
+from geopy.geocoders import Nominatim
+from geopy.distance import geodesic
 
 
-def calculate_distance(ref_point, target_point):
-    ref_x, ref_y = ref_point
-    target_x, target_y = target_point
+def get_city_coordinates(city_name):
+    geolocator = Nominatim(user_agent="city_locator")
+    location = geolocator.geocode(city_name)
 
-    distance = math.sqrt((target_x - ref_x) ** 2 + (target_y - ref_y) ** 2)
+    if location:
+        return location.latitude, location.longitude
+    else:
+        return None
 
+
+def calculate_distance(coord1, coord2):
+    # coord1 and coord2 should be tuples of the form (latitude, longitude)
+    distance = geodesic(coord1, coord2).kilometers  # You can use .miles for distance in miles
     return distance
 
 
@@ -117,19 +126,26 @@ def calculateAndAddDistance(data, customer_coordinates):
     return data
 
 
-def assign_and_sort_property_list(data, customer_preferences, city):
+def assign_and_sort_property_list(data, customer_preferences, city, max_points):
     points_list = []
     city_coordinates = None
     if city is not None:
-        print(
-            "write code to get customer_coordinates as center of city")  # write code to get customer_coordinates as center of city
+        city_coordinates = get_city_coordinates(city)
+
+        if city_coordinates:
+            print(
+                f"The coordinates of the middle of {city} are: Latitude = {city_coordinates[0]}, Longitude = {city_coordinates[1]}")
+        else:
+            print(f"Could not find coordinates for {city}.")
 
     # comment coordinates later
-    city_coordinates = (32.333, -33.67)
+   # city_coordinates = (32.333, -33.67)
     min_price = getMinimumPropertyPrice(data)
 
     data = calculateAndAddDistance(data, city_coordinates)
-
+    customer_school_proximity_weight = customer_preferences.school_proximity
+    customer_transit_proximity_weight = customer_preferences.transit_proximity
+    customer_hospital_proximity_weight = customer_preferences.hospital_proximity
     min_distance = getMinimumDistance(data)
 
     for value in data:
@@ -145,17 +161,22 @@ def assign_and_sort_property_list(data, customer_preferences, city):
         distance = value.distance
         distance_points = assign_points_for_distance(distance, min_distance)
         price_points = assign_points_for_price(min_price, property_price)
-        school_proximity_points: proximity_points(school_proximity, 2000)
-        hospital_proximity_points: proximity_points(hospital_proximity, 10000)
-        transit_proximity_points: proximity_points(transit_proximity, 1000)
+        school_proximity_points = proximity_points(customer_school_proximity_weight,school_proximity, 2000)
+        hospital_proximity_points = proximity_points(customer_hospital_proximity_weight,hospital_proximity, 10000)
+        transit_proximity_points = proximity_points(customer_transit_proximity_weight,transit_proximity, 1000)
 
         points = calculatePoints(customer_preferences, distance_points, price_points,
                                  school_proximity_points, hospital_proximity_points, transit_proximity_points,
                                  in_house_laundry, gym, pet_friendly, pool)
 
-        value["points"] = points
+        value.school_proximity_points = school_proximity_points
+        value.hospital_proximity_points = hospital_proximity_points
+        value.transit_proximity_points = transit_proximity_points
+        value.max_points = max_points
 
-    sorted_points_list = sorted(data, key=lambda x: x.get("points", 0), reverse=True)
+        value.points = points
+
+    sorted_points_list = sorted(data, key=lambda x: x.points, reverse=True)
 
     return sorted_points_list
 
@@ -209,17 +230,29 @@ def add_percent_close(sorted_property_list, reference_points):
     return sorted_property_list
 
 
-def proximity_points(proximity, benchmark):
-    if proximity <= benchmark or proximity <= benchmark * 1.2:
-        return proximity
+def proximity_points(weight, proximity, benchmark):
+    if proximity < benchmark:
+        return weight;
 
-    excess = proximity - (benchmark * 1.2)
+    # Calculate percentage difference
+    percentage_diff = ((proximity - benchmark) / benchmark) * 100
 
-    decrements = excess // (benchmark * 0.2)
+    # Assign points based on percentage difference
+    if percentage_diff <= 20:
+        return weight
+    elif 20 < percentage_diff < 40:
+        points = weight - 0.5
+    elif 40 <= percentage_diff < 60:
+        points = weight - 1
+    elif 60 <= percentage_diff < 80:
+        points = weight - 1.5
+    else:
+        points = points = weight - 2.5
 
-    adjusted_proximity = proximity - (decrements * 0.5)
+    if points < 0:
+        return 0
 
-    return max(adjusted_proximity, 0)
+    return points
 
 
 def categorize_properties_by_percent_close(sorted_property_list):
