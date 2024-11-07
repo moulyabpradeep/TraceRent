@@ -1,22 +1,8 @@
 
-
-DELETE_DISLIKED_PROPERTIES_QUERY = f"""
-DELETE FROM tenant_preference_details
-WHERE is_liked = 0 AND created_at < DATE_SUB(NOW(), INTERVAL :days_threshold DAY)
-"""
-
-GET_LIKED_PROPERTIES_QUERY = f"""
-SELECT *
-FROM tenant_preference_details
-WHERE user_id = :user_id AND is_liked = 1
-"""
-
-
-GET_DISLIKED_PROPERTIES_QUERY = f"""
-SELECT *
-FROM tenant_preference_details
-WHERE user_id = :user_id AND is_liked = 0
-"""
+#TODO: rewrite 3 quires : delete-disliked,liked,disliked
+DELETE_DISLIKED_PROPERTIES_QUERY = f""" """
+GET_LIKED_PROPERTIES_QUERY = f""" """
+GET_DISLIKED_PROPERTIES_QUERY = f""" """
 
 
 # db_queries.py

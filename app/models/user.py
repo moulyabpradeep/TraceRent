@@ -9,7 +9,7 @@ class User(Base):
 
     user_id = Column(Integer, primary_key=True, index=True)  # Primary key
     username = Column(String(255), unique=True, index=True)  # Unique username
-    password = Column(String(255)),  # User password
-    name = Column(String(255)),
-    email = Column(String(255)),
+    password = Column(String(255))  # User password
+    name = Column(String(255))
+    email = Column(String(255))
     phone = Column(String(15)) # +1(226)899-9729

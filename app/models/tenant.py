@@ -15,7 +15,6 @@ class TenantPersonalDetails(Base):
     name = Column(String)
     email = Column(String)
     phone = Column(Integer)
-    province = Column(String)
     dob = Column(Date)
 
 class TenantPreferenceDetails(Base):
