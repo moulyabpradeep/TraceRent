@@ -1,6 +1,6 @@
 from apscheduler.schedulers.background import BackgroundScheduler
 from sqlalchemy import text
-from app.database import engine  # Use existing engine from database.py
+from app.database_connect import engine  # Use existing engine from database.py
 from app.global_constants import DELETE_DISLIKED_PROPERTIES_QUERY, DAYS_THRESHOLD
 
 def scheduled_cleanup():

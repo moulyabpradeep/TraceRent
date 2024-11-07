@@ -1,7 +1,7 @@
 # property.py
 
 from sqlalchemy import Column, Integer, String, ForeignKey
-from app.database import Base
+from app.database_connect import Base
 from app.global_constants import (  # Importing from constants
     PROPERTY_CATEGORY_TABLE,
     TENANT_CATEGORY_TABLE,

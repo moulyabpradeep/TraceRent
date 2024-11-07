@@ -18,21 +18,3 @@ TENT_CAT_ID_COLUMN = 'tent_cat_id'
 
 # Configurable interval (in days)
 DAYS_THRESHOLD = 7
-
-DELETE_DISLIKED_PROPERTIES_QUERY = f"""
-DELETE FROM {TENANT_PREFERENCE_DETAILS_TABLE}
-WHERE is_liked = 0 AND created_at < DATE_SUB(NOW(), INTERVAL :days_threshold DAY)
-"""
-
-GET_LIKED_PROPERTIES_QUERY = f"""
-SELECT *
-FROM {TENANT_PREFERENCE_DETAILS_TABLE}
-WHERE user_id = :user_id AND is_liked = 1
-"""
-
-
-GET_DISLIKED_PROPERTIES_QUERY = f"""
-SELECT *
-FROM {TENANT_PREFERENCE_DETAILS_TABLE}
-WHERE user_id = :user_id AND is_liked = 0
-"""
