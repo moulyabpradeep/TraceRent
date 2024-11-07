@@ -1,2 +1,7 @@
-configparser
-apscheduler
+configparser~=7.1.0
+apscheduler~=3.10.4
+SQLAlchemy~=2.0.36
+requests~=2.32.3
+mysql~=0.0.3
+mysql-connector-python~=9.1.0
+flask~=3.0.3
