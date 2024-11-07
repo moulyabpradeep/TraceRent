@@ -1,14 +1,7 @@
 # property_service.py
 
 from sqlalchemy.orm import Session
-from app.dal.property_dal import (
-    get_property, 
-    create_property, 
-    update_property, 
-    delete_property, 
-    get_all_properties,
-    get_price_range_for_tenant_category
-    )
+from app.dal.property_dal import *
 from app.models.property import PropertyData, TenantPreferredProperties
 
 def add_new_property(db: Session, property_data: dict):
@@ -24,9 +17,6 @@ def update_existing_property(db: Session, unit_id: int, property_update_data: di
     """Update a property's details by unit ID."""
     return update_property(db, unit_id, property_update_data)
 
-def remove_property(db: Session, unit_id: int):
-    """Remove a property by unit ID."""
-    return delete_property(db, unit_id)
 
 def get_all_properties_list(db: Session):
     """Retrieve all properties."""

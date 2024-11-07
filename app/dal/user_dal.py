@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
-from models import User
-from dataobjects.data_objects import UserData
+from app.models import User
+from app.dal.dataobjects.data_objects import UserData
 # Save a user to the database and return the user ID
 def save_user_to_db(db: Session, user_data: UserData) -> int:
     new_user = User(**user_data.__dict__)  # Directly unpack UserData into User

@@ -2,23 +2,15 @@
 CREATE DATABASE IF NOT EXISTS trace_rent_ai;
 USE trace_rent_ai;
 
--- Create Users Table
-CREATE TABLE `users` (
-  `user_id` INT PRIMARY KEY,
-  `username` VARCHAR(255),
-  `password` VARCHAR(255)
-);
-
--- Create Tenant Personal Details Table
 CREATE TABLE `tenant_personal_details` (
   `user_id` INT PRIMARY KEY,
+  `username` VARCHAR(255),
+  `password` VARCHAR(255),
   `name` VARCHAR(255),
   `email` VARCHAR(255),
-  `phone` VARCHAR(15),
-  `province` VARCHAR(255),
-  `dob` DATE,
-  FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`)
+  `phone` VARCHAR(15)
 );
+
 
 -- Create Tenant Category Table
 CREATE TABLE `tenant_category` (
@@ -39,7 +31,6 @@ CREATE TABLE `tenant_preferred_properties` (
   FOREIGN KEY (`tent_cat_id`) REFERENCES `tenant_category` (`tent_cat_id`),
   FOREIGN KEY (`prop_cat_id`) REFERENCES `property_category` (`prop_cat_id`)
 );
-
 -- Create Property Data Table
 CREATE TABLE `property_data` (
   `prop_cat_id` INT,
@@ -53,19 +44,9 @@ CREATE TABLE `property_data` (
   `address` VARCHAR(255),
   `rent` DECIMAL(10, 2),
   `lease_length` VARCHAR(255),
-  FOREIGN KEY (`prop_cat_id`) REFERENCES `property_category` (`prop_cat_id`)
-);
-
--- Create Behaviour Data Table
-CREATE TABLE `behaviour_data` (
-  `user_id` INT PRIMARY KEY,
-  `prop_searched` INT,
-  `prop_viewed` INT,
-  `prop_saved` INT,
-  FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`),
-  FOREIGN KEY (`prop_searched`) REFERENCES `property_data` (`unit_id`),
-  FOREIGN KEY (`prop_viewed`) REFERENCES `property_data` (`unit_id`),
-  FOREIGN KEY (`prop_saved`) REFERENCES `property_data` (`unit_id`)
+  FOREIGN KEY (`prop_cat_id`) 
+    REFERENCES `property_category` (`prop_cat_id`) 
+    ON DELETE CASCADE  -- Add this line for cascading delete
 );
 
 -- Create Location Table
@@ -79,8 +60,11 @@ CREATE TABLE `location` (
   `country` VARCHAR(255),
   `latitude` VARCHAR(50),
   `longitude` VARCHAR(50),
-  FOREIGN KEY (`unit_id`) REFERENCES `property_data` (`unit_id`)
+  FOREIGN KEY (`unit_id`) 
+    REFERENCES `property_data` (`unit_id`) 
+    ON DELETE CASCADE  -- Add this line for cascading delete
 );
+
 
 -- Create Amenities Table
 CREATE TABLE `amenities` (
@@ -96,7 +80,9 @@ CREATE TABLE `amenities` (
   `visitor_parking` BOOLEAN,
   `pool` BOOLEAN,
   `pet_friendly` BOOLEAN,
-  FOREIGN KEY (`unit_id`) REFERENCES `property_data` (`unit_id`)
+ FOREIGN KEY (`unit_id`) 
+    REFERENCES `property_data` (`unit_id`) 
+    ON DELETE CASCADE  -- Add this line for cascading delete
 );
 
 -- Create Tenant Financial Preferences Table
@@ -106,7 +92,7 @@ CREATE TABLE `tenant_financial_preferences` (
   `monthly_savings` INT,
   `monthly_debt` INT,
   `rent_percentage` INT,
-  FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`)
+  FOREIGN KEY (`user_id`) REFERENCES `tenant_personal_details` (`user_id`)
 );
 
 -- Create Areas Table
@@ -118,36 +104,44 @@ CREATE TABLE `areas` (
   `country` VARCHAR(255)
 );
 
--- Create Temporary User Sessions Table
-CREATE TABLE `temp_user_sessions` (
-  `session_id` CHAR(36) PRIMARY KEY,
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  `expires_at` TIMESTAMP
-);
-
 -- Create Tenant Preference Details Table
 CREATE TABLE `tenant_preference_details` (
   `id` INT PRIMARY KEY AUTO_INCREMENT,
   `user_id` INT,
-  `session_id` CHAR(36),
+  `session_id` VARCHAR(255),
   `tenant_category_id` INT,
   `location_category_id` INT,
   `budget_category_id` INT,
   `school_proximity` INT,
   `hospital_proximity` INT,
   `transit_proximity` INT,
-  `laundry` BOOLEAN,
+  `in_house_laundry` BOOLEAN,
   `gym` BOOLEAN,
   `pet_friendly` BOOLEAN,
   `pool` BOOLEAN,
   `is_logged_in` BOOLEAN,
-  FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`),
-  FOREIGN KEY (`session_id`) REFERENCES `temp_user_sessions` (`session_id`),
+  FOREIGN KEY (`user_id`) REFERENCES `tenant_personal_details` (`user_id`),
   FOREIGN KEY (`tenant_category_id`) REFERENCES `tenant_category` (`tent_cat_id`)
 );
 
+-- Create Tenant Actions Table
+CREATE TABLE `tenant_actions` (
+  `action_id` INT AUTO_INCREMENT PRIMARY KEY,
+  `tenant_preference_details_id` INT,
+  `unit_id` INT,
+  `is_viewed` BOOLEAN DEFAULT FALSE,
+  `is_liked` BOOLEAN DEFAULT FALSE,
+  `is_contacted` BOOLEAN DEFAULT FALSE,
+  FOREIGN KEY (`tenant_preference_details_id`) REFERENCES `tenant_preference_details` (`id`),
+  FOREIGN KEY (`unit_id`) REFERENCES `property_data` (`unit_id`) ON DELETE CASCADE
+);
+
+
 -- Create an index for fast lookups by session ID or user ID
 CREATE INDEX idx_user_or_session ON `tenant_preference_details` (`user_id`, `session_id`);
+
+ALTER TABLE tenant_preference_details
+ADD UNIQUE KEY unique_user_session (user_id, session_id);
 
 -- Insert static data for tenant categories
 INSERT INTO `tenant_category` (`tent_cat_id`, `tent_category`) 

@@ -25,14 +25,6 @@ def update_property(db: Session, unit_id: int, property_update_data: dict):
         db.commit()
     return property_
 
-def delete_property(db: Session, unit_id: int):
-    """Delete a property by unit ID."""
-    property_ = db.query(PropertyData).filter(PropertyData.unit_id == unit_id).first()
-    if property_:
-        db.delete(property_)
-        db.commit()
-    return property_
-
 def get_all_properties(db: Session):
     """Retrieve all properties."""
     return db.query(PropertyData).all()

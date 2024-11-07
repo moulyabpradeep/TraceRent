@@ -1,26 +1,8 @@
 # tenant_service.py
 
 from sqlalchemy.orm import Session
-from app.data_access_objects.daos import UserPreferences
-from app.dal.tenant_dal import (
-    get_tenant, 
-    create_tenant, 
-    update_tenant, 
-    delete_tenant, 
-    get_all_tenants,
-    get_tenant_by_email,
-    get_tenants_by_province,
-    create_property_preference,
-    get_property_preference,
-    update_property_preference,
-    delete_property_preference,
-    get_preferences_by_user,
-    get_preferences_by_session,
-    get_liked_properties_for_user,
-    get_disliked_properties_for_user,
-    save_tenant_preferences
-)
-from app.models.tenant import TenantPersonalDetails, TenantPreferenceDetails
+from app.dal.tenant_dal import *
+from app.models.tenant import *
 
 def add_new_tenant(db: Session, tenant_data: dict):
     """Add a new tenant using provided data."""
@@ -70,6 +52,14 @@ def get_all_preferences_by_session(db: Session, session_id: str):
     """Retrieve all property preferences for a specific session."""
     return get_preferences_by_session(db, session_id)
 
-def save_preferences_to_db(db: Session, json_data: str):
-    preferences = UserPreferences.from_json(json_data)
-    return save_tenant_preferences(db, preferences)
+# app/services/tenant_service.py
+
+def save_preferences_service(db, json_data):
+    """
+    Service function to save or update tenant preferences.
+    It calls the DAL to interact with the database.
+    """
+    
+    result = upsert_preferences_to_db(db, json_data)
+   
+    return result
