@@ -1,7 +1,7 @@
 #tenant.py
 
 from sqlalchemy import Column, Integer, String, Date
-from app.database import Base
+from app.database_connect import Base
 from app.global_constants import (  # Importing from constants
     TENANT_PERSONAL_DETAILS_TABLE,
     TENANT_PREFERENCE_DETAILS_TABLE,

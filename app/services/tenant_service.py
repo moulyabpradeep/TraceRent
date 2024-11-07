@@ -1,6 +1,7 @@
 # tenant_service.py
 
 from sqlalchemy.orm import Session
+from DataAccessObjects.DAOs import UserPreferences
 from app.dal.tenant_dal import (
     get_tenant, 
     create_tenant, 
@@ -16,7 +17,8 @@ from app.dal.tenant_dal import (
     get_preferences_by_user,
     get_preferences_by_session,
     get_liked_properties_for_user,
-    get_disliked_properties_for_user
+    get_disliked_properties_for_user,
+    save_tenant_preferences
 )
 from app.models.tenant import TenantPropertyPreferences
 from app.models.tenant import TenantPersonalDetails
@@ -86,3 +88,7 @@ def get_all_liked_properties_by_user(db: Session, user_id: int):
 def get_all_disliked_properties_by_user(db: Session, user_id: int):
     """Retrieve all disliked properties a specific user."""
     return get_disliked_properties_for_user(db, user_id)
+
+def save_preferences_to_db(db: Session, json_data: str):
+    preferences = UserPreferences.from_json(json_data)
+    return save_tenant_preferences(db, preferences)

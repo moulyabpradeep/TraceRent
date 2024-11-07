@@ -1,7 +1,15 @@
+# tenant_dal.py
+
 from sqlalchemy.orm import Session
 from app.models.tenant import TenantPersonalDetails, TenantPropertyPreferences
+from DataAccessObjects.DAOs import UserPreferences
+from dataclasses import asdict
 from sqlalchemy import text
-from app.global_constants import GET_LIKED_PROPERTIES_QUERY, GET_DISLIKED_PROPERTIES_QUERY
+from db_queries import (
+    UPSERT_TENANT_PREFERENCES,
+    GET_LIKED_PROPERTIES_QUERY,
+    GET_DISLIKED_PROPERTIES_QUERY
+)
 
 # CRUD for tenant_personal_details
 def get_tenant(db: Session, user_id: int):
@@ -80,3 +88,23 @@ def get_liked_properties_for_user(db, user_id):
 
 def get_disliked_properties_for_user(db, user_id):
     return db.execute(text(GET_DISLIKED_PROPERTIES_QUERY), {"user_id": user_id}).fetchall()
+
+def save_tenant_preferences(db, preferences: UserPreferences):
+    try:
+        # Convert the dataclass to a dictionary
+        params = asdict(preferences)
+        
+        # Adjust user_id to be None if it’s empty
+        if not params["user_id"]:
+            params["user_id"] = None
+        
+        # Execute the UPSERT query
+        db.execute(text(UPSERT_TENANT_PREFERENCES), params)
+        db.commit()  # Commit the transaction to save the changes
+        
+        return True  # Return True if save was successful
+    except Exception as e:
+        db.rollback()  # Rollback in case of an error
+        print(f"Error saving preferences: {e}")
+        return False  # Return False if there was an error
+

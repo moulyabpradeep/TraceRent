@@ -1,7 +1,14 @@
 # property_service.py
 
 from sqlalchemy.orm import Session
-from app.dal.property_dal import get_property, create_property, update_property, delete_property, get_all_properties
+from app.dal.property_dal import (
+    get_property, 
+    create_property, 
+    update_property, 
+    delete_property, 
+    get_all_properties,
+    get_price_range_for_tenant_category
+    )
 from app.models.property import PropertyData, TenantPreferredProperties
 
 def add_new_property(db: Session, property_data: dict):
@@ -32,3 +39,7 @@ def get_properties_by_category(db: Session, category_id: int):
 def get_tenant_preferred_properties(db: Session, tenant_category_id: int):
     """Retrieve properties preferred by a tenant category."""
     return db.query(TenantPreferredProperties).filter(TenantPreferredProperties.tent_cat_id == tenant_category_id).all()
+
+def get_price_range(db: Session, tenant_category_id: int):
+    min_rent, max_rent = get_price_range_for_tenant_category(db, tenant_category_id)
+    return {"min_rent": min_rent, "max_rent": max_rent}
