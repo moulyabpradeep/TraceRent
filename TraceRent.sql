@@ -104,11 +104,10 @@ CREATE TABLE `areas` (
   `country` VARCHAR(255)
 );
 
--- Create Tenant Preference Details Table
 CREATE TABLE `tenant_preference_details` (
   `id` INT PRIMARY KEY AUTO_INCREMENT,
-  `user_id` INT,
-  `session_id` VARCHAR(255),
+  `session_id` VARCHAR(255) UNIQUE,
+  `user_id` INT NULL,
   `tenant_category_id` INT,
   `location_category_id` INT,
   `budget_category_id` INT,
@@ -120,9 +119,12 @@ CREATE TABLE `tenant_preference_details` (
   `pet_friendly` BOOLEAN,
   `pool` BOOLEAN,
   `is_logged_in` BOOLEAN,
-  FOREIGN KEY (`user_id`) REFERENCES `tenant_personal_details` (`user_id`),
-  FOREIGN KEY (`tenant_category_id`) REFERENCES `tenant_category` (`tent_cat_id`)
+  FOREIGN KEY (`tenant_category_id`) REFERENCES `tenant_category` (`tent_cat_id`),
+  CONSTRAINT unique_user_session UNIQUE (`user_id`, `session_id`)
 );
+
+-- Optional index on `user_id` for faster lookups by user
+CREATE INDEX idx_user_id ON `tenant_preference_details` (`user_id`);
 
 -- Create Tenant Actions Table
 CREATE TABLE `tenant_actions` (
@@ -136,12 +138,6 @@ CREATE TABLE `tenant_actions` (
   FOREIGN KEY (`unit_id`) REFERENCES `property_data` (`unit_id`) ON DELETE CASCADE
 );
 
-
--- Create an index for fast lookups by session ID or user ID
-CREATE INDEX idx_user_or_session ON `tenant_preference_details` (`user_id`, `session_id`);
-
-ALTER TABLE tenant_preference_details
-ADD UNIQUE KEY unique_user_session (user_id, session_id);
 
 -- Insert static data for tenant categories
 INSERT INTO `tenant_category` (`tent_cat_id`, `tent_category`) 

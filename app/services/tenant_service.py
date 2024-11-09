@@ -3,63 +3,120 @@
 from sqlalchemy.orm import Session
 from app.dal.tenant_dal import *
 from app.models.tenant import *
+from app.database_connect import SessionLocal
 
-def add_new_tenant(db: Session, tenant_data: dict):
+
+def add_new_tenant(tenant_data: dict):
     """Add a new tenant using provided data."""
     tenant = TenantPersonalDetails(**tenant_data)
-    return create_tenant(db, tenant)
+    db = SessionLocal()
+    
+    try:
+        return  create_tenant(db, tenant)
+    finally:
+        db.close()
 
-def get_tenant_by_id(db: Session, user_id: int):
+def get_tenant_by_id(user_id: int):
     """Retrieve tenant details by user ID."""
-    return get_tenant(db, user_id)
+    db = SessionLocal()
+    
+    try:
+        return  get_tenant(db, user_id)
+    finally:
+        db.close()
 
-def update_existing_tenant(db: Session, user_id: int, tenant_update_data: dict):
+def update_existing_tenant(user_id: int, tenant_update_data: dict):
     """Update a tenant's details by user ID."""
-    return update_tenant(db, user_id, tenant_update_data)
+    db = SessionLocal()
+    
+    try:
+        return  update_tenant(db, user_id, tenant_update_data)
+    finally:
+        db.close()
 
-def remove_tenant(db: Session, user_id: int):
+def remove_tenant(user_id: int):
     """Remove a tenant by user ID."""
-    return delete_tenant(db, user_id)
+    db = SessionLocal()
+    
+    try:
+        return  delete_tenant(db, user_id)
+    finally:
+        db.close()
 
 def get_all_tenants_list(db: Session):
     """Retrieve all tenants."""
-    return get_all_tenants(db)
+    db = SessionLocal()
+    
+    try:
+        return  get_all_tenants(db)
+    finally:
+        db.close()
 
-def get_tenant_details_by_email(db: Session, email: str):
+def get_tenant_details_by_email(email: str):
     """Retrieve tenant details by email."""
-    return get_tenant_by_email(db, email)
+    db = SessionLocal()
+    
+    try:
+        return  get_tenant_by_email(db, email)
+    finally:
+        db.close()
 
-def get_tenants_details_by_province(db: Session, province: str):
+def get_tenants_details_by_province(province: str):
     """Retrieve tenants by province."""
-    return get_tenants_by_province(db, province)
+    db = SessionLocal()
+    
+    try:
+        return  get_tenants_by_province(db, province)
+    finally:
+        db.close()
 
 # Property Preferences Service Functions
 
-def add_property_preference(db: Session, user_id: int, session_id: str, unit_id: int, is_liked: bool):
+def add_property_preference(user_id: int, session_id: str, unit_id: int, is_liked: bool):
     """Add a new property preference for a user or session."""
     preference = TenantPreferenceDetails(user_id=user_id, session_id=session_id, unit_id=unit_id, is_liked=is_liked)
-    return create_property_preference(db, preference)
+    db = SessionLocal()
+    
+    try:
+        return  create_property_preference(db, preference)
+    finally:
+        db.close()
 
-def get_property_preference_details(db: Session, preference_id: int):
+def get_property_preference_details(preference_id: int):
     """Retrieve property preference details by preference ID."""
-    return get_property_preference(db, preference_id)
+    db = SessionLocal()
+    
+    try:
+        return  get_property_preference(db, preference_id)
+    finally:
+        db.close()
 
-def get_all_preferences_by_user(db: Session, user_id: int):
+def get_all_preferences_by_user(user_id: int):
     """Retrieve all property preferences for a specific user."""
-    return get_preferences_by_user(db, user_id)
+    db = SessionLocal()
+    
+    try:
+        return  get_preferences_by_user(db, user_id)
+    finally:
+        db.close()
 
-def get_all_preferences_by_session(db: Session, session_id: str):
+def get_all_preferences_by_session(session_id: str):
     """Retrieve all property preferences for a specific session."""
-    return get_preferences_by_session(db, session_id)
+    db = SessionLocal()
+    
+    try:
+        return  get_preferences_by_session(db, session_id)
+    finally:
+        db.close()
 
-# app/services/tenant_service.py
 
-def save_preferences_service(db, json_data):
+def save_preferences_service(json_data):
     """
     Service function to save or update tenant preferences.
     It calls the DAL to interact with the database.
     """
-    
-    result = upsert_preferences_to_db(db, json_data)
-   
-    return result
+    db = SessionLocal()
+    try:
+        return  upsert_preferences_to_db(db, json_data)
+    finally:
+        db.close()

@@ -9,8 +9,9 @@ import os
 from pathlib import Path
 from app.routes import TraceRentAPIInvoker as tcapi
 from app.DataAccessObjects import DAOs
-from app.services import authentication_service as auth
 import base64
+from app.services.tenant_service import *
+from mysql.connector import Error
 
 
 app = Flask(__name__)
@@ -182,12 +183,23 @@ def get_price_range_api():
     return jsonify({"message": "Price range fetching logic not implemented"}), 200
 
 
-# Empty method for saving customer preferences
+# Method for saving customer preferences
 @app.route('/savePreferences', methods=['POST'])
 @require_basic_auth
 def save_preferences_api():
-    preferences = DAOs.UserPreferences.from_json(request.json)
-    return tcapi.save_preferences_to_db(preferences)
+    #preferences = DAOs.UserPreferences.from_json(request.json)
+    try:
+        print(request.json)
+        if(save_preferences_service(request.json)):
+            print("Preferences successfully saved to the database.")
+            return jsonify({"message": "Preferences saved successfully!"}), 201
+        else:
+            return jsonify({"message": "Something went wrong!"}), 500
+    except Exception as e:
+        print(f"Exception: {e}")
+        return jsonify({"error": "Something went wrong"}), 500
+
+    
 
 
 # Method for signing up

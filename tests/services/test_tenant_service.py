@@ -29,16 +29,16 @@ def test_save_preferences_to_db_integration():
             "is_logged_in": False,
             "user_id": 1,
             "tenant_category_id": 1,
-            "location_category_id": 1,
-            "budget_category_id": 1,
-            "school_proximity": 1,
+            "location_category_id": 2,
+            "budget_category_id": 2,
+            "school_proximity": 2,
             "hospital_proximity": 2,
             "transit_proximity": 5,
             "session_id": "1"
         })
         
         # Call the function to save preferences to the database
-        save_preferences_service(db, json_data)
+        save_preferences_service(json_data)
 
         # Commit the session (to ensure that changes are saved in the database)
         db.commit()
