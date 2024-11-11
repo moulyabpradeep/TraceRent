@@ -2,7 +2,7 @@
 CREATE DATABASE IF NOT EXISTS trace_rent_ai;
 USE trace_rent_ai;
 
-CREATE TABLE `tenant_personal_details` (
+CREATE TABLE `user` (
   `user_id` INT PRIMARY KEY AUTO_INCREMENT,
   `username` VARCHAR(255),
   `password` VARCHAR(255),
@@ -95,7 +95,7 @@ CREATE TABLE `tenant_financial_preferences` (
   `monthly_savings` INT,
   `monthly_debt` INT,
   `rent_percentage` INT,
-  FOREIGN KEY (`user_id`) REFERENCES `tenant_personal_details` (`user_id`)
+  FOREIGN KEY (`user_id`) REFERENCES `user` (`user_id`)
 );
 
 CREATE TABLE `tenant_preference_details` (

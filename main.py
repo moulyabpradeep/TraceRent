@@ -1,10 +1,8 @@
-from flask import Flask, request, jsonify, abort
+from flask import Flask, request, jsonify
 from functools import wraps
 import configparser
-import json
 from app.DataAccessObjects.DAOs import PropertyObject
 from app.business import TenantMatchingIMPL as impl
-from app.routes import TraceRentAPIInvoker as api
 import os
 from pathlib import Path
 from app.routes import TraceRentAPIInvoker as tcapi
@@ -12,7 +10,6 @@ from app.DataAccessObjects import DAOs
 import base64
 from app.services.tenant_service import *
 from app.services.user_service import *
-from mysql.connector import Error
 
 
 app = Flask(__name__)
@@ -208,9 +205,10 @@ def save_preferences_api():
 def save_preferences_api():
     try:
         print(request.json)
-        user_id=user_sign_up(request.json)
-        if(user_id):
-            return jsonify({"message": "User saved successfully, User Id:" + str(user_id)}), 201
+        
+        if(save_preferences_service(request.json)):
+            print("Preferences successfully saved to the database.")
+            return jsonify({"message": "Preferences saved successfully!"}), 201
         else:
             return jsonify({"message": "Something went wrong!"}), 500
     except Exception as e:
@@ -239,8 +237,17 @@ def sign_up_api():
 @app.route('/login', methods=['POST'])
 @require_basic_auth
 def login_api():
-    user_data = DAOs.UserData.from_json(request.json)
-    return tcapi.login_api(user_data)
+    try:
+        data=request.json
+        print(data)
+        user=get_user_by_username(data.get("user_email"))
+        if(user):
+            return jsonify({"message": "User Found successfully, User:" + str(user)}), 201
+        else:
+            return jsonify({"message": "Something went wrong!"}), 500
+    except Exception as e:
+        print(f"Exception: {e}")
+        return jsonify({"error": "Something went wrong"}), 500
 
 
 #uncomment for api testing

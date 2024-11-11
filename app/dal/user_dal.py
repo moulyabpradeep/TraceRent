@@ -1,11 +1,11 @@
 from sqlalchemy.orm import Session
-from app.models.user import User
+from app.models.user import Users
 
 from sqlalchemy.orm import Session
 # Save a user to the database and return the user ID
-def save_user_to_db(db: Session, user_data: User) -> int:
+def save_user_to_db(db: Session, user_data: Users) -> int:
     
-    new_user = User(
+    new_user = Users(
         username=user_data['user_email'],
         password=user_data['user_password'],
         name=user_data['name_of_user'],
@@ -20,5 +20,5 @@ def save_user_to_db(db: Session, user_data: User) -> int:
 
 
 # Retrieve a user from the database by email
-def get_user_from_db(db: Session, email: str) -> User:
-    return db.query(User).filter(User.email == email).first()
+def get_user_from_db(db: Session, email: str) -> Users:
+    return db.query(Users).filter(Users.email == email).first()
