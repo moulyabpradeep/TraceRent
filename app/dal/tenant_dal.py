@@ -144,11 +144,12 @@ def upsert_preferences_to_db(db: Session, data_dict: dict):
     return True
 
 #TODO: Call this query while login
-def update_user_in_preference_table(db: Session, data_dict: dict):
+def update_user_id_in_preference_table(db: Session, user_id: int, session_id: str, is_logged_in: bool):
     # Extract the relevant keys and values from the data_dict
     params = {
-        key: data_dict.get(key)
-        for key in ["user_id", "session_id", "is_logged_in"]
+        "user_id": user_id,
+        "session_id": session_id,
+        "is_logged_in": is_logged_in
     }
 
     db.execute(update_user_id_query, params)

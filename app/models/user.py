@@ -12,4 +12,4 @@ class User(Base):
     password = Column(String(255))  # User password
     name = Column(String(255))
     email = Column(String(255))
-    phone = Column(String(15)) # +1(226)899-9729
+    phone = Column(String(15)) # +1(226)999-9999

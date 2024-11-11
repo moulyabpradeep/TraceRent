@@ -3,7 +3,7 @@ CREATE DATABASE IF NOT EXISTS trace_rent_ai;
 USE trace_rent_ai;
 
 CREATE TABLE `tenant_personal_details` (
-  `user_id` INT PRIMARY KEY,
+  `user_id` INT PRIMARY KEY AUTO_INCREMENT,
   `username` VARCHAR(255),
   `password` VARCHAR(255),
   `name` VARCHAR(255),
@@ -33,8 +33,9 @@ CREATE TABLE `tenant_preferred_properties` (
 );
 -- Create Property Data Table
 CREATE TABLE `property_data` (
-  `prop_cat_id` INT,
   `unit_id` INT PRIMARY KEY,
+  `unit_number` INT,
+  `prop_cat_id` INT,
   `prop_name` VARCHAR(255),
   `prop_type` VARCHAR(255),
   `no_of_rooms` VARCHAR(255),
@@ -51,7 +52,8 @@ CREATE TABLE `property_data` (
 
 -- Create Location Table
 CREATE TABLE `location` (
-  `unit_id` INT PRIMARY KEY,
+  `id` INT PRIMARY KEY AUTO_INCREMENT,
+  `unit_id` INT,
   `apt_unit_number` VARCHAR(50),
   `street_name` VARCHAR(255),
   `community` VARCHAR(255),
@@ -68,7 +70,8 @@ CREATE TABLE `location` (
 
 -- Create Amenities Table
 CREATE TABLE `amenities` (
-  `unit_id` INT PRIMARY KEY,
+  `id` INT PRIMARY KEY AUTO_INCREMENT,
+  `unit_id` INT,
   `accessibility` VARCHAR(255),
   `parking` INT,
   `gym` BOOLEAN,
@@ -93,15 +96,6 @@ CREATE TABLE `tenant_financial_preferences` (
   `monthly_debt` INT,
   `rent_percentage` INT,
   FOREIGN KEY (`user_id`) REFERENCES `tenant_personal_details` (`user_id`)
-);
-
--- Create Areas Table
-CREATE TABLE `areas` (
-  `area_id` INT PRIMARY KEY AUTO_INCREMENT,
-  `community` VARCHAR(255),
-  `city` VARCHAR(255),
-  `province` VARCHAR(255),
-  `country` VARCHAR(255)
 );
 
 CREATE TABLE `tenant_preference_details` (

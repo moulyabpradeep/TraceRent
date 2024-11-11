@@ -6,7 +6,8 @@ from app.services.tenant_service import save_preferences_service
 from app.models.tenant import *
 
 # Configure a connection to the test database
-DATABASE_URL = "mysql+pymysql://root:root123@localhost/trace_rent_ai"  # Adjust credentials as needed
+DATABASE_URL = "mysql+pymysql://root:root123@localhost/dummy"  
+# Adjust credentials as needed, it directly saves to DB, hence changed the credentials
 
 # Create an engine and session for the test database
 engine = create_engine(DATABASE_URL)
@@ -14,6 +15,7 @@ TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engin
 
 # Set up the database schema for tests
 Base.metadata.create_all(bind=engine)
+
 
 def test_save_preferences_to_db_integration():
     # Set up a new database session

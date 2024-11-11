@@ -11,6 +11,7 @@ from app.routes import TraceRentAPIInvoker as tcapi
 from app.DataAccessObjects import DAOs
 import base64
 from app.services.tenant_service import *
+from app.services.user_service import *
 from mysql.connector import Error
 
 
@@ -182,14 +183,15 @@ def get_price_range_api():
     # TODO: Implement the logic to fetch the price range
     return jsonify({"message": "Price range fetching logic not implemented"}), 200
 
-
-# Method for saving customer preferences
+"""
+# Method for saving customer preferences : WORKING PERFECTLY FINE
 @app.route('/savePreferences', methods=['POST'])
 @require_basic_auth
 def save_preferences_api():
     #preferences = DAOs.UserPreferences.from_json(request.json)
     try:
         print(request.json)
+        
         if(save_preferences_service(request.json)):
             print("Preferences successfully saved to the database.")
             return jsonify({"message": "Preferences saved successfully!"}), 201
@@ -198,7 +200,22 @@ def save_preferences_api():
     except Exception as e:
         print(f"Exception: {e}")
         return jsonify({"error": "Something went wrong"}), 500
+"""
 
+# Method for saving customer preferences
+@app.route('/savePreferences', methods=['POST'])
+@require_basic_auth
+def save_preferences_api():
+    try:
+        print(request.json)
+        user_id=user_sign_up(request.json)
+        if(user_id):
+            return jsonify({"message": "User saved successfully, User Id:" + str(user_id)}), 201
+        else:
+            return jsonify({"message": "Something went wrong!"}), 500
+    except Exception as e:
+        print(f"Exception: {e}")
+        return jsonify({"error": "Something went wrong"}), 500
     
 
 
@@ -206,8 +223,16 @@ def save_preferences_api():
 @app.route('/signup', methods=['POST'])
 @require_basic_auth
 def sign_up_api():
-    user_data = DAOs.UserData.from_json(request.json)
-    return tcapi.sign_up_api(user_data)
+    try:
+        print(request.json)
+        user_id=user_sign_up(request.json)
+        if(user_id):
+            return jsonify({"message": "User saved successfully, User Id:" + str(user_id)}), 201
+        else:
+            return jsonify({"message": "Something went wrong!"}), 500
+    except Exception as e:
+        print(f"Exception: {e}")
+        return jsonify({"error": "Something went wrong"}), 500
 
 
 # Method for logging in

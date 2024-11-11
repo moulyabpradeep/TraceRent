@@ -120,3 +120,15 @@ def save_preferences_service(json_data):
         return  upsert_preferences_to_db(db, json_data)
     finally:
         db.close()
+        
+
+def update_user_id_in_preferences(json_data, user_id: int, session_id: str, is_logged_in: bool):
+    """
+    Service function to update tenant preferences with user-id and is-logged-in
+    """
+    db = SessionLocal()
+    try:
+        return  update_user_id_in_preference_table(db, user_id, session_id, is_logged_in)
+    
+    finally:
+        db.close()
