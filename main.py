@@ -5,14 +5,80 @@ from app.DataAccessObjects.DAOs import PropertyObject
 from app.business import TenantMatchingIMPL as impl
 import os
 from pathlib import Path
-from app.routes import TraceRentAPIInvoker as tcapi
 from app.DataAccessObjects import DAOs
 import base64
 from app.services.tenant_service import *
+from app.services.property_service import *
 from app.services.user_service import *
+from http import HTTPStatus
+import logging
+from app import global_constants as const
+from enum import Enum
 
 
 app = Flask(__name__)
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+class Filter(Enum):
+    LIKED = "LIKED"
+    DISLIKED = "DISLIKED"
+    VIEWED = "VIEWED"
+    CONTACTED = "CONTACTED"
+
+
+# Utility functions
+def create_login_response(success: bool, message: str, status_code: int, user_info=None):
+    """Standardized response format for JSON API responses, including user info."""
+    return {
+        "success": success,
+        "message": message,
+        "user_info": user_info if user_info else None
+    }, status_code
+
+
+def create_preferences_response(success: bool, message: str, status_code: int):
+    """Standardized response format for JSON API responses."""
+    return {
+        "success": success,
+        "message": message
+    }, status_code
+
+
+def create_signup_response(success: bool, message: str, status_code: int, additional_info=None):
+    """Standardized response format for JSON API responses, with optional additional information."""
+    response = {
+        "success": success,
+        "message": message
+    }
+    if additional_info is not None:
+        response.update(additional_info)
+    return response, status_code
+
+
+def create_rating_standard_response(success: bool, message: str, status_code: int, additional_info=None):
+    """Standardized response format for JSON API responses, with optional additional information."""
+    response = {
+        "success": success,
+        "message": message
+    }
+    if additional_info is not None:
+        response.update(additional_info)
+    return response, status_code
+
+
+def create_standard_response(success: bool, message: str, status_code: int, additional_info=None):
+    """Standardized response format for JSON API responses, with optional additional information."""
+    response = {
+        "success": success,
+        "message": message
+    }
+    if additional_info is not None:
+        response.update(additional_info)
+    return response, status_code
 
 
 def check_auth(username, password):
@@ -27,6 +93,15 @@ def check_auth(username, password):
     return username == auth_user and password == auth_password
 
 
+def create_range_standard_response(success: bool, message: str, status_code: int, additional_info: dict = None):
+    """Standardized response format for JSON API responses."""
+    response = {"success": success, "message": message}
+    if additional_info:
+        response.update(additional_info)
+    return response, status_code
+
+
+#Auth functions
 def require_basic_auth(f):
     """Decorator to enforce basic authentication."""
 
@@ -157,6 +232,7 @@ def tenantMatching(customer_preferences):
     return bucket_list
 
 
+#API ROUTES
 # Define the route to access tenantMatching method
 @app.route('/tenantMatching', methods=['GET'])
 @require_basic_auth
@@ -177,8 +253,36 @@ def tenant_matching_api():
 @app.route('/priceRange', methods=['GET'])
 @require_basic_auth
 def get_price_range_api():
-    # TODO: Implement the logic to fetch the price range
-    return jsonify({"message": "Price range fetching logic not implemented"}), 200
+    try:
+
+        #TODO: Replace (0,1000) with method, return min and max as tuple
+        price_range = 0,1000
+
+        if price_range:
+            logger.info("Price range fetched successfully.")
+            list = impl.get_price_ranges(price_range)
+            return create_range_standard_response(
+                success=True,
+                message=const.PRICE_RANGE_FETCH_SUCCESS_MSG,
+                status_code=HTTPStatus.OK,
+                additional_info={"price_range": list}
+            )
+        else:
+            logger.warning("Price range not found.")
+            return create_rating_standard_response(
+                success=False,
+                message=const.PRICE_RANGE_FETCH_FAILURE_MSG,
+                status_code=HTTPStatus.OK
+            )
+
+    except Exception as e:
+        logger.exception("Exception occurred while fetching price range.")
+        return create_rating_standard_response(
+            success=False,
+            message=const.GENERAL_ERROR_MSG,
+            status_code=HTTPStatus.INTERNAL_SERVER_ERROR
+        )
+
 
 """
 # Method for saving customer preferences : WORKING PERFECTLY FINE
@@ -199,22 +303,29 @@ def save_preferences_api():
         return jsonify({"error": "Something went wrong"}), 500
 """
 
+
 # Method for saving customer preferences
 @app.route('/savePreferences', methods=['POST'])
 @require_basic_auth
 def save_preferences_api():
     try:
-        print(request.json)
-        
-        if(save_preferences_service(request.json)):
-            print("Preferences successfully saved to the database.")
-            return jsonify({"message": "Preferences saved successfully!"}), 201
+        # Log the incoming request JSON
+        logger.info("Received request for saving preferences: %s", request.json)
+
+        # Attempt to save preferences
+        if save_preferences_service(request.json):
+            logger.info("Preferences successfully saved to the database.")
+            return create_preferences_response(success=True, message=const.PREFERENCES_SAVE_SUCCESS,
+                                            status_code=HTTPStatus.CREATED)
         else:
-            return jsonify({"message": "Something went wrong!"}), 500
+            logger.error("Failed to save preferences to the database.")
+            return create_preferences_response(success=False, message=const.PREFERENCES_SAVE_FAILURE,
+                                            status_code=HTTPStatus.INTERNAL_SERVER_ERROR)
+
     except Exception as e:
-        print(f"Exception: {e}")
-        return jsonify({"error": "Something went wrong"}), 500
-    
+        logger.exception("Exception occurred while saving preferences: %s", e)
+        return create_preferences_response(success=False, message=const.GENERAL_ERROR_MSG,
+                                        status_code=HTTPStatus.INTERNAL_SERVER_ERROR)
 
 
 # Method for signing up
@@ -222,32 +333,210 @@ def save_preferences_api():
 @require_basic_auth
 def sign_up_api():
     try:
-        print(request.json)
-        user_id=user_sign_up(request.json)
-        if(user_id):
-            return jsonify({"message": "User saved successfully, User Id:" + str(user_id)}), 201
+        # Log the incoming request JSON
+        logger.info("Received sign-up request: %s", request.json)
+
+        # Validate input
+        data = request.get_json()
+        if not data or "user_email" not in data:
+            logger.warning("Invalid input for email.")
+            return create_signup_response(success=False, message=const.INVALID_EMAIL_MSG, status_code=HTTPStatus.BAD_REQUEST)
+
+        email = data.get("user_email")
+
+        # Check if user already exists
+        user = get_user_by_username(email)
+        if user:
+            logger.info("User already exists: %s", user)
+            return create_signup_response(success=False, message=const.USER_EXISTS_MSG, status_code=HTTPStatus.CONFLICT, additional_info={"user": str(user)})
+
+        # Attempt user registration
+        user_id = user_sign_up(data)
+        if user_id:
+            logger.info("User saved successfully with User ID: %s", user_id)
+            return create_signup_response(success=True, message=const.USER_SIGNUP_SUCCESS_MSG, status_code=HTTPStatus.CREATED, additional_info={"user_id": user_id})
         else:
-            return jsonify({"message": "Something went wrong!"}), 500
+            logger.error("Failed to save user.")
+            return create_signup_response(success=False, message=const.GENERAL_ERROR_MSG, status_code=HTTPStatus.INTERNAL_SERVER_ERROR)
+
     except Exception as e:
-        print(f"Exception: {e}")
-        return jsonify({"error": "Something went wrong"}), 500
+        logger.exception("Exception occurred during sign-up: %s", e)
+        return create_signup_response(success=False, message=const.GENERAL_ERROR_MSG, status_code=HTTPStatus.INTERNAL_SERVER_ERROR)
 
 
 # Method for logging in
-@app.route('/login', methods=['POST'])
+@app.route('/login', methods=['GET'])
 @require_basic_auth
 def login_api():
     try:
-        data=request.json
-        print(data)
-        user=get_user_by_username(data.get("user_email"))
-        if(user):
-            return jsonify({"message": "User Found successfully, User:" + str(user)}), 201
+        data = request.get_json()
+        if not data or "user_password" not in data:
+            return create_login_response(success=False, message=const.INVALID_PASSWORD_MSG, status_code=HTTPStatus.BAD_REQUEST)
+
+        decoded_password = data.get("user_password")
+        if not decoded_password:
+            return create_login_response(success=False, message=const.INVALID_PASSWORD_MSG, status_code=HTTPStatus.BAD_REQUEST)
+
+        # Retrieve user details from the database
+        user_email = data.get("user_email")
+        user = get_user_by_username(user_email)
+
+        if not user:
+            return create_login_response(success=False, message=const.USER_NOT_FOUND_MSG, status_code=HTTPStatus.NOT_FOUND)
+
+        user_password_from_db = user.get("password")
+        decoded_password_from_db = impl.decrypt_password(user_password_from_db, decoded_password)
+
+        # Validate password
+        if user_password_from_db and decoded_password_from_db == decoded_password:
+            return create_login_response(success=True, message=const.USER_FOUND_MSG, status_code=HTTPStatus.OK, user_info=user)
         else:
-            return jsonify({"message": "Something went wrong!"}), 500
+            return create_login_response(success=False, message=const.PASSWORD_INCORRECT_MSG, status_code=HTTPStatus.UNAUTHORIZED, user_info=None)
+
     except Exception as e:
-        print(f"Exception: {e}")
-        return jsonify({"error": "Something went wrong"}), 500
+        app.logger.error(f"Exception in login_api: {e}")
+        return create_login_response(success=False, message=const.GENERAL_ERROR_MSG, status_code=HTTPStatus.INTERNAL_SERVER_ERROR, user_info=None)
+
+
+# Empty method for rating properties
+@app.route('/likeDislikeProperty', methods=['PUT'])
+@require_basic_auth
+def like_dislike_property():
+    try:
+        data = request.json
+        if data is None:
+            logger.warning("No data received for property rating.")
+            return create_rating_standard_response(success=False, message=const.NO_DATA_MSG, status_code=HTTPStatus.BAD_REQUEST)
+
+        # TODO: Replace `None` with actual database method call to fetch liked properties based on data, returns Boolean
+        rated = None
+
+        # Check if properties were fetched successfully
+        if rated is not None and rated == True:
+            logger.info("Properties fetched successfully for rating.")
+            return create_rating_standard_response(success=True, message=const.PROPERTIES_FETCH_SUCCESS_MSG, status_code=HTTPStatus.OK, additional_info={"rated": rated})
+        else:
+            logger.info("Unable to fetch properties")
+            return create_rating_standard_response(success=False, message=const.PROPERTIES_FETCH_FAILURE_MSG, status_code=HTTPStatus.OK)
+
+    except Exception as e:
+        logger.exception("Exception occurred during property rating.")
+        return create_rating_standard_response(success=False, message=const.GENERAL_ERROR_MSG, status_code=HTTPStatus.INTERNAL_SERVER_ERROR)
+
+
+# Empty method for getting liked properties
+@app.route('/likedProperties', methods=['GET'])
+@require_basic_auth
+def get_liked_properties():
+    try:
+        data = request.json
+        print(data)
+        if data is None:
+            logger.warning("No data received for property rating.")
+            return create_rating_standard_response(success=False, message=const.NO_DATA_MSG,
+                                                   status_code=HTTPStatus.BAD_REQUEST)
+        # TODO: Replace `[]` with actual database method call to fetch liked properties as a JSON array
+        liked_properties = get_properties_by_action(data.get("user_id"), data.get("filter_type"))
+
+        if liked_properties:
+            logger.info("Liked properties fetched successfully.")
+            return create_standard_response(
+                success=True,
+                message=const.PROPERTIES_FETCH_SUCCESS_MSG,
+                status_code=HTTPStatus.OK,
+                additional_info={"liked_properties": liked_properties}
+            )
+        else:
+            logger.info("No properties found.")
+            return create_standard_response(
+                success=False,
+                message=const.PROPERTIES_FETCH_FAILURE_MSG,
+                status_code=HTTPStatus.OK
+            )
+
+    except Exception as e:
+        logger.exception("Exception occurred while fetching liked properties.")
+        return create_standard_response(
+            success=False,
+            message=const.GENERAL_ERROR_MSG,
+            status_code=HTTPStatus.INTERNAL_SERVER_ERROR
+        )
+
+
+# Empty method for getting disliked properties
+@app.route('/dislikedProperties', methods=['GET'])
+@require_basic_auth
+def get_disliked_properties():
+    try:
+        data = request.json
+        if data is None:
+            logger.warning("No data received for property rating.")
+            return create_rating_standard_response(success=False, message=const.NO_DATA_MSG,
+                                                   status_code=HTTPStatus.BAD_REQUEST)
+        # TODO: Replace `[]` with actual database method call to fetch diliked properties as a JSON array
+        filter = const.LIKED_FILTER
+        disliked_properties = []
+
+        if disliked_properties:
+            logger.info("Disliked properties fetched successfully.")
+            return create_standard_response(
+                success=True,
+                message=const.PROPERTIES_FETCH_SUCCESS_MSG,
+                status_code=HTTPStatus.OK,
+                additional_info={"disliked_properties": disliked_properties}
+            )
+        else:
+            logger.info("No properties found.")
+            return create_standard_response(
+                success=False,
+                message=const.PROPERTIES_FETCH_FAILURE_MSG,
+                status_code=HTTPStatus.OK
+            )
+
+    except Exception as e:
+        logger.exception("Exception occurred while fetching disliked properties.")
+        return create_standard_response(
+            success=False,
+            message=const.GENERAL_ERROR_MSG,
+            status_code=HTTPStatus.INTERNAL_SERVER_ERROR
+        )
+
+
+@app.route('/contactedProperties', methods=['GET'])
+@require_basic_auth
+def get_contacted_properties():
+    try:
+        data = request.json
+        if data is None:
+            logger.warning("No data received for contacted properties method.")
+            return create_rating_standard_response(success=False, message=const.NO_DATA_MSG,
+                                                   status_code=HTTPStatus.BAD_REQUEST)
+        # TODO: Replace `[]` with actual database method call to fetch contacted properties as a JSON array
+        contacted_properties = []
+
+        if contacted_properties:
+            logger.info("Contacted properties fetched successfully.")
+            return create_standard_response(
+                success=True,
+                message=const.PROPERTIES_FETCH_SUCCESS_MSG,
+                status_code=HTTPStatus.OK,
+                additional_info={"disliked_properties": contacted_properties}
+            )
+        else:
+            logger.info("No properties found.")
+            return create_standard_response(
+                success=False,
+                message=const.PROPERTIES_FETCH_FAILURE_MSG,
+                status_code=HTTPStatus.OK
+            )
+
+    except Exception as e:
+        logger.exception("Exception occurred while fetching contacted properties.")
+        return create_standard_response(
+            success=False,
+            message=const.GENERAL_ERROR_MSG,
+            status_code=HTTPStatus.INTERNAL_SERVER_ERROR
+        )
 
 
 #uncomment for api testing
@@ -292,4 +581,46 @@ login_request = {
 }
 
 tenant_matching_api_local()
+
+
+def login_api_local(data):
+    try:
+        # Parse request JSON
+        if not data or "user_password" not in data:
+            return create_location_response(success=False, message=INVALID_PASSWORD_MSG, status_code=HTTPStatus.BAD_REQUEST, user_info=None)
+
+        decoded_password = data.get("user_password")
+        if not decoded_password:
+            return create_location_response(success=False, message=INVALID_PASSWORD_MSG, status_code=HTTPStatus.BAD_REQUEST, user_info=None)
+
+        # Retrieve user details from the database
+        user_email = data.get("user_email")
+        user={
+              "username": "john.doe@example.com",
+              "password": "PUBX7KD7TLGLP7JYGHWWMGHT4TUKGP73LINO6TWAELBIEZ26WRPHY===",
+             }
+
+        if not user:
+            return create_login_response(success=False, message=USER_NOT_FOUND_MSG, status_code=HTTPStatus.NOT_FOUND)
+
+        user_password_from_db = user.get("password")
+        decoded_password_from_db = impl.decrypt_password(user_password_from_db, decoded_password)
+
+        # Validate password
+        if user_password_from_db and decoded_password_from_db == decoded_password:
+            return create_login_response(success=True, message=f"{USER_FOUND_MSG}, User: {str(user)}", status_code=HTTPStatus.OK)
+        else:
+            return create_login_response(success=False, message=PASSWORD_INCORRECT_MSG, status_code=HTTPStatus.UNAUTHORIZED)
+
+    except Exception as e:
+        app.logger.error(f"Exception in login_api: {e}")
+        return create_login_response(success=False, message=GENERAL_ERROR_MSG, status_code=HTTPStatus.INTERNAL_SERVER_ERROR)
+
+
+login_request = {
+    "user_email": "john.doe@example.com",
+    "user_password": "SecurePassword123",
+}
+
+login_api_local(login_request)
 '''

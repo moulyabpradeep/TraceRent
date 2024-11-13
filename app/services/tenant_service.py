@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.dal.tenant_dal import *
 from app.models.tenant import *
 from app.database_connect import SessionLocal
+from app.data_access_objects.daos import TenantActionsData
 
 
 def add_new_tenant(tenant_data: dict):
@@ -122,7 +123,7 @@ def save_preferences_service(json_data):
         db.close()
         
 
-def update_user_id_in_preferences(json_data, user_id: int, session_id: str, is_logged_in: bool):
+def update_user_id_in_preferences(user_id: int, session_id: str, is_logged_in: bool):
     """
     Service function to update tenant preferences with user-id and is-logged-in
     """
@@ -132,3 +133,14 @@ def update_user_id_in_preferences(json_data, user_id: int, session_id: str, is_l
     
     finally:
         db.close()
+
+
+def handle_tenant_actions(json_data):
+    # Convert JSON to TenantActionsData object using the static method
+    tenant_action_data = TenantActionsData.from_json(json_data)
+    
+    session = SessionLocal()
+    try:
+        upsert_tenant_action(session, tenant_action_data)
+    finally:
+        session.close()

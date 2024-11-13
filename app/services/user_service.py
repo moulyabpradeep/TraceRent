@@ -16,7 +16,7 @@ def user_sign_up(user_data: Users) -> int:
         #save_user_to_db(db, user_data)
         user_id=save_user_to_db(db, user_data)
         if(user_id):
-            if(update_user_id_in_preferences(db, user_id, user_data['session_id'], True)):
+            if(update_user_id_in_preferences(user_id, user_data['session_id'], True)):
                 return user_id
             else:
                 0

@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 import json
+from pydantic import BaseModel
 from typing import Optional
+from enum import Enum
 
 
 @dataclass
@@ -38,4 +40,24 @@ class UserData:
     def from_json(json_str: str) -> 'UserData':
         data = json.loads(json_str)
         return UserData(**data)
+
+
+class TenantActionsData(BaseModel):
+    unit_id: int
+    is_logged_in: bool
+    user_id: int
+    is_viewed: Optional[bool] = False
+    is_liked: Optional[bool] = False
+    is_contacted: Optional[bool] = False
     
+    @staticmethod
+    def from_json(action_data_json: dict):
+        # Optional preprocessing or validation logic
+        return TenantActionsData(**action_data_json)
+
+
+class TenantActionFilterType(Enum):
+    LIKED = "LIKED"
+    DISLIKED = "DISLIKED"
+    CONTACTED = "CONTACTED"
+

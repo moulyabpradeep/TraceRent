@@ -1,2 +1,2 @@
 # Import individual dao classes here
-from .daos import UserPreferences
+from .daos import *

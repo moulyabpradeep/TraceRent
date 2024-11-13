@@ -1,10 +1,14 @@
 # tenant_dal.py
 
-from sqlalchemy.orm import Session
-from app.models.tenant import TenantPersonalDetails, TenantPreferenceDetails
+from sqlalchemy.orm import Session, aliased
 from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
+from app.models.tenant import TenantPersonalDetails, TenantPreferenceDetails
 from app.db_queries import *
-import json
+from app.data_access_objects.daos import TenantActionsData, TenantActionFilterType
+from sqlalchemy.exc import SQLAlchemyError
+from typing import List, Optional
+from app.models.property import PropertyData
 
 # CRUD for tenant_personal_details
 def get_tenant(db: Session, user_id: int):
@@ -143,7 +147,7 @@ def upsert_preferences_to_db(db: Session, data_dict: dict):
    
     return True
 
-#TODO: Call this query while login
+# Call this query while login
 def update_user_id_in_preference_table(db: Session, user_id: int, session_id: str, is_logged_in: bool):
     # Extract the relevant keys and values from the data_dict
     params = {
@@ -162,3 +166,120 @@ SET `user_id` = :user_id,
     `is_logged_in` = :is_logged_in
 WHERE `session_id` = :session_id;
 """)
+
+
+def upsert_tenant_action(session: Session, tenant_preference_details_id: int, unit_id: int, is_liked: bool, is_contacted: bool):
+    # Check if an entry exists
+    action = session.query(TenantActions).filter_by(tenant_preference_details_id=tenant_preference_details_id, unit_id=unit_id).first()
+    
+    if action:
+        # Update existing record
+        action.is_liked = is_liked
+        action.is_contacted = is_contacted
+    else:
+        # Insert new record
+        action = TenantActions(
+            tenant_preference_details_id=tenant_preference_details_id,
+            unit_id=unit_id,
+            is_liked=is_liked,
+            is_contacted=is_contacted
+        )
+        session.add(action)
+
+    session.commit()
+
+
+
+class TenantPreferenceNotFoundError(Exception):
+    """Custom exception for missing tenant preference details."""
+    pass
+
+def upsert_tenant_action(session: Session, tenant_action_data: TenantActionsData):
+    try:
+        # Determine `tenant_preference_details_id` based on session_id or user_id
+        tenant_preference_details_id = get_tenant_preference_id(session, tenant_action_data.user_id)
+        
+        # Handle case where tenant_preference_details_id is None
+        if tenant_preference_details_id is None:
+            raise TenantPreferenceNotFoundError("Tenant preference details not found for the given user or session.")
+        
+        # Check if an entry already exists
+        action = session.query(TenantActions).filter_by(
+            tenant_preference_details_id=tenant_preference_details_id,
+            unit_id=tenant_action_data.unit_id
+        ).first()
+        
+        if action:
+            # Update existing record
+            action.is_liked = tenant_action_data.is_liked
+            action.is_contacted = tenant_action_data.is_contacted
+        else:
+            # Insert new record
+            action = TenantActions(
+                tenant_preference_details_id=tenant_preference_details_id,
+                unit_id=tenant_action_data.unit_id,
+                is_liked=tenant_action_data.is_liked,
+                is_contacted=tenant_action_data.is_contacted
+            )
+            session.add(action)
+
+        session.commit()
+        
+    except TenantPreferenceNotFoundError as e:
+        session.rollback()
+        print(f"Error: {e}")  # Log the error or raise it again based on the application's needs
+        
+    except SQLAlchemyError as e:
+        session.rollback()
+        print(f"Database error: {e}")  # Log the database error or handle it further
+
+    except Exception as e:
+        session.rollback()
+        print(f"Unexpected error: {e}")  # Handle any other unexpected errors
+
+def get_tenant_preference_id(db: Session, user_id: int):
+    # Fetch tenant_preference_details_id based on user_id
+    tenant_preference = db.query(TenantPreferenceDetails).filter_by(user_id=user_id).first()
+    
+    if tenant_preference:
+        return tenant_preference.id  # Return the `id` of the tenant preference record
+    else:
+        return None  # Return None if no preference record is found for the user
+
+
+from sqlalchemy.orm import joinedload
+
+def get_properties_by_tenant_action_filter(db, user_id, filter_type):
+    query = (
+        db.query(PropertyData)
+        .join(TenantActions, TenantActions.unit_id == PropertyData.unit_id)
+        .join(TenantPreferenceDetails, TenantPreferenceDetails.id == TenantActions.tenant_preference_details_id)
+        .options(
+            joinedload(PropertyData.property_category),
+            joinedload(PropertyData.property_media),
+            joinedload(PropertyData.location),
+            joinedload(PropertyData.amenities),
+            joinedload(PropertyData.tenant_actions)
+        )
+        .filter(TenantPreferenceDetails.user_id == user_id)
+    )
+
+    # Apply filter based on filter_type
+    if filter_type.upper() == TenantActionFilterType.LIKED.value.upper():
+        query = query.filter(TenantActions.is_liked == True)
+    elif filter_type.upper() == TenantActionFilterType.DISLIKED.value.upper():
+        query = query.filter(TenantActions.is_liked == False)
+    elif filter_type.upper() == TenantActionFilterType.CONTACTED.value.upper():
+        query = query.filter(TenantActions.is_contacted == True)
+
+    # Execute the query and get results
+    properties_data = query.all()
+
+    if not properties_data:
+        raise ValueError(f"No properties found for user_id {user_id} with filter {filter_type}")
+
+    # Convert each property to a dictionary using the to_dict() method
+    response = [property_data.to_dict() for property_data in properties_data]
+
+    return response
+
