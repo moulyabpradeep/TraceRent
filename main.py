@@ -409,7 +409,7 @@ def like_dislike_property():
             return create_rating_standard_response(success=False, message=const.NO_DATA_MSG, status_code=HTTPStatus.BAD_REQUEST)
 
         # TODO: Replace `None` with actual database method call to fetch liked properties based on data, returns Boolean
-        rated = None
+        rated = handle_tenant_actions(data)
 
         # Check if properties were fetched successfully
         if rated is not None and rated == True:

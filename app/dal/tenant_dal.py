@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session, aliased
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from app.models.tenant import TenantPersonalDetails, TenantPreferenceDetails
+from app.models.property import TenantActions
 from app.db_queries import *
 from app.data_access_objects.daos import TenantActionsData, TenantActionFilterType
 from sqlalchemy.exc import SQLAlchemyError
