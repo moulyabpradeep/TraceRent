@@ -250,37 +250,16 @@ def get_tenant_preference_id(db: Session, user_id: int):
 
 from sqlalchemy.orm import joinedload
 
-def get_properties_by_tenant_action_filter(db, user_id, filter_type):
-    query = (
-        db.query(PropertyData)
-        .join(TenantActions, TenantActions.unit_id == PropertyData.unit_id)
-        .join(TenantPreferenceDetails, TenantPreferenceDetails.id == TenantActions.tenant_preference_details_id)
-        .options(
-            joinedload(PropertyData.property_category),
-            joinedload(PropertyData.property_media),
-            joinedload(PropertyData.location),
-            joinedload(PropertyData.amenities),
-            joinedload(PropertyData.tenant_actions)
-        )
-        .filter(TenantPreferenceDetails.user_id == user_id)
-    )
-
-    # Apply filter based on filter_type
-    if filter_type.upper() == TenantActionFilterType.LIKED.value.upper():
-        query = query.filter(TenantActions.is_liked == True)
-    elif filter_type.upper() == TenantActionFilterType.DISLIKED.value.upper():
-        query = query.filter(TenantActions.is_liked == False)
-    elif filter_type.upper() == TenantActionFilterType.CONTACTED.value.upper():
-        query = query.filter(TenantActions.is_contacted == True)
-
-    # Execute the query and get results
-    properties_data = query.all()
-
-    if not properties_data:
-        raise ValueError(f"No properties found for user_id {user_id} with filter {filter_type}")
-
-    # Convert each property to a dictionary using the to_dict() method
-    response = [property_data.to_dict() for property_data in properties_data]
-
+def get_properties_by_tenant_action_filter(db, user_id):#filter_type
+    
+    # Query TenantActions where `is_liked` is True and `user_id` matches
+    tenant_preferences = (
+    db.query(TenantPreferenceDetails)
+    .options(joinedload(TenantPreferenceDetails.tenant_actions))  # Eager load tenant_actions
+    .filter(TenantPreferenceDetails.user_id == 6)
+    .all())
+    
+    # Convert results to dictionary format
+    response = [tpd.to_dict() for tpd in tenant_preferences]
     return response
 

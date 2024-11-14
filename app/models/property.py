@@ -1,10 +1,9 @@
 # property.py
 
-from sqlalchemy import Column, Integer, String, ForeignKey, Boolean
-from app.database_connect import Base
-from sqlalchemy import Numeric
+from sqlalchemy import Column, Integer, String, ForeignKey, Boolean, Numeric
 from sqlalchemy.orm import relationship
-from app.global_constants import (  # Importing from constants
+from app.database_connect import Base
+from app.global_constants import (
     PROPERTY_CATEGORY_TABLE,
     TENANT_CATEGORY_TABLE,
     TENANT_PREFERRED_PROPERTIES_TABLE,
@@ -14,20 +13,24 @@ from app.global_constants import (  # Importing from constants
     TENANT_ACTIONS_TABLE
 )
 
+# Define a max recursion depth to prevent infinite loops
+MAX_RECURSION_DEPTH = 2
+
+# TenantPreferredProperties Model
 class TenantPreferredProperties(Base):
-    __tablename__ = TENANT_PREFERRED_PROPERTIES_TABLE  # Use constant for table name
+    __tablename__ = TENANT_PREFERRED_PROPERTIES_TABLE
     
     id = Column(Integer, primary_key=True)
-    tent_cat_id = Column(Integer, ForeignKey(f'{TENANT_CATEGORY_TABLE}.{TENT_CAT_ID_COLUMN}'))  # Using constant for ForeignKey
-    prop_cat_id = Column(Integer, ForeignKey(f'{PROPERTY_CATEGORY_TABLE}.{PROP_CAT_ID_COLUMN}'))  # Using constant for ForeignKey
+    tent_cat_id = Column(Integer, ForeignKey(f'{TENANT_CATEGORY_TABLE}.{TENT_CAT_ID_COLUMN}'))
+    prop_cat_id = Column(Integer, ForeignKey(f'{PROPERTY_CATEGORY_TABLE}.{PROP_CAT_ID_COLUMN}'))
 
 # PropertyData Model
 class PropertyData(Base):
-    __tablename__ = PROPERTY_DATA_TABLE  # Use constant for table name
-
+    __tablename__ = PROPERTY_DATA_TABLE
+    
     unit_id = Column(Integer, primary_key=True, index=True)
     unit_number = Column(Integer)
-    prop_cat_id = Column(Integer, ForeignKey(f'{PROPERTY_CATEGORY_TABLE}.{PROP_CAT_ID_COLUMN}'))  # Using constant for ForeignKey
+    prop_cat_id = Column(Integer, ForeignKey(f'{PROPERTY_CATEGORY_TABLE}.{PROP_CAT_ID_COLUMN}'))
     prop_name = Column(String(255))
     prop_type = Column(String(255))
     no_of_rooms = Column(String(255))
@@ -37,15 +40,18 @@ class PropertyData(Base):
     address = Column(String(255))
     rent = Column(Numeric(10, 2))
     lease_length = Column(String(255))
-
+    
     # Relationships
-    property_category = relationship("PropertyCategory", back_populates="property_data")
-    property_media = relationship("PropertyMedia", back_populates="property_data")
-    location = relationship("Location", back_populates="property_data")
-    amenities = relationship("Amenities", back_populates="property_data")
-    tenant_actions = relationship("TenantActions", back_populates="property_data")
+    #tenant_actions = relationship("TenantActions", back_populates="property_data")
+    #location = relationship('Location', back_populates='property_data', uselist=False)  # Assuming one-to-one
+    #amenities = relationship('Amenities', back_populates='property_data', uselist=False)  # Assuming one-to-one
+    #property_media = relationship('PropertyMedia', back_populates='property_data')
+    #property_category = relationship('PropertyCategory', back_populates='property_data')
 
-    def to_dict(self):
+    def to_dict(self, depth=0):
+        if depth >= MAX_RECURSION_DEPTH:
+            return {"unit_id": self.unit_id}  # base fields to avoid deep recursion
+        
         return {
             "unit_id": self.unit_id,
             "unit_number": self.unit_number,
@@ -58,25 +64,19 @@ class PropertyData(Base):
             "address": self.address,
             "rent": str(self.rent),
             "lease_length": self.lease_length,
-            "property_category": {
-                "prop_cat_id": self.property_category.prop_cat_id,
-                "prop_category": self.property_category.prop_category
-            },
-            "property_media": [media.to_dict() for media in self.property_media],
-            "location": [location.to_dict() for location in self.location],
-            "amenities": [amenities.to_dict() for amenities in self.amenities],
-            "tenant_actions": [tenant_action.to_dict() for tenant_action in self.tenant_actions]
+            "property_category": self.property_category.to_dict(depth + 1) if self.property_category else None,
+            "property_media": [media.to_dict(depth + 1) for media in self.property_media],
+            "location": self.location.to_dict(depth + 1) if self.location else None,
+            "amenities": self.amenities.to_dict(depth + 1) if self.amenities else None,
+            "tenant_actions": [action.to_dict(depth + 1) for action in self.tenant_actions]
         }
 
 # PropertyCategory Model
 class PropertyCategory(Base):
     __tablename__ = PROPERTY_CATEGORY_TABLE
-
+    
     prop_cat_id = Column(Integer, primary_key=True, index=True)
     prop_category = Column(String(255))
-
-    # Relationship back_populates
-    property_data = relationship("PropertyData", back_populates="property_category")
 
     def to_dict(self):
         return {
@@ -87,15 +87,15 @@ class PropertyCategory(Base):
 # PropertyMedia Model
 class PropertyMedia(Base):
     __tablename__ = 'property_media'
-
+    
     media_id = Column(Integer, primary_key=True, index=True)
     unit_id = Column(Integer, ForeignKey('property_data.unit_id'))
     category = Column(String(255))
     photo_url = Column(String(255))
     sequence = Column(Integer)
-
+    
     # Relationship back_populates
-    property_data = relationship("PropertyData", back_populates="property_media")
+    #property_data = relationship("PropertyData", back_populates="property_media")
 
     def to_dict(self):
         return {
@@ -108,7 +108,7 @@ class PropertyMedia(Base):
 # Location Model
 class Location(Base):
     __tablename__ = 'location'
-
+    
     id = Column(Integer, primary_key=True, index=True)
     unit_id = Column(Integer, ForeignKey('property_data.unit_id'))
     apt_unit_number = Column(String(50))
@@ -119,9 +119,9 @@ class Location(Base):
     country = Column(String(255))
     latitude = Column(String(50))
     longitude = Column(String(50))
-
+    
     # Relationship back_populates
-    property_data = relationship("PropertyData", back_populates="location")
+    #property_data = relationship("PropertyData", back_populates="location")
 
     def to_dict(self):
         return {
@@ -138,7 +138,7 @@ class Location(Base):
 # Amenities Model
 class Amenities(Base):
     __tablename__ = 'amenities'
-
+    
     id = Column(Integer, primary_key=True, index=True)
     unit_id = Column(Integer, ForeignKey('property_data.unit_id'))
     accessibility = Column(String(255))
@@ -152,9 +152,9 @@ class Amenities(Base):
     visitor_parking = Column(Boolean)
     pool = Column(Boolean)
     pet_friendly = Column(Boolean)
-
+    
     # Relationship back_populates
-    property_data = relationship("PropertyData", back_populates="amenities")
+    #property_data = relationship("PropertyData", back_populates="amenities")
 
     def to_dict(self):
         return {
@@ -174,16 +174,14 @@ class Amenities(Base):
 # TenantActions Model
 class TenantActions(Base):
     __tablename__ = TENANT_ACTIONS_TABLE
-
+    
     action_id = Column(Integer, primary_key=True, autoincrement=True)
     tenant_preference_details_id = Column(Integer, ForeignKey('tenant_preference_details.id'))
     unit_id = Column(Integer, ForeignKey('property_data.unit_id', ondelete='CASCADE'))
     is_liked = Column(Boolean, default=None)
     is_contacted = Column(Boolean, default=None)
-
-    # Relationships
+    
     tenant_preference_details = relationship("TenantPreferenceDetails", back_populates="tenant_actions")
-    property_data = relationship("PropertyData", back_populates="tenant_actions")
 
     def to_dict(self):
         return {

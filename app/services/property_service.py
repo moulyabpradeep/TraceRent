@@ -77,10 +77,10 @@ def get_properties_data(unit_ids: list):
 def get_properties_by_action(user_id:int, filter_type:TenantActionFilterType):
     # Initialize the database session
     db = SessionLocal()
-
+    print(user_id, filter_type)
     # Fetch properties in bulk using the optimized DAL function
-    properties_data = get_properties_by_tenant_action_filter(db, user_id, filter_type)
-
+    properties_data = get_properties_by_tenant_action_filter(db, user_id)
+    print(properties_data)
     # Close the database session
     db.close()
 
@@ -89,7 +89,9 @@ def get_properties_by_action(user_id:int, filter_type:TenantActionFilterType):
         return {"message": "Properties not found"}
 
     # Use the to_dict() method to serialize each property and return as a list
-    response = [property_data.to_dict() for property_data in properties_data]
+    #response = [property_data for property_data in properties_data]
+    response = [property_data for property_data in properties_data]
+
 
     
     return response

@@ -37,6 +37,29 @@ class TenantPreferenceDetails(Base):
     pet_friendly = Column(Boolean, default=False)
     pool = Column(Boolean, default=False)
     is_logged_in = Column(Boolean, default=False)
+    
+     # Define relationships
+    tenant_actions = relationship("TenantActions", back_populates="tenant_preference_details")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "session_id": self.session_id,
+            "user_id": self.user_id,
+            "tenant_category_id": self.tenant_category_id,
+            "location_category_id": self.location_category_id,
+            "budget_category_id": self.budget_category_id,
+            "school_proximity": self.school_proximity,
+            "hospital_proximity": self.hospital_proximity,
+            "transit_proximity": self.transit_proximity,
+            "in_house_laundry": self.in_house_laundry,
+            "gym": self.gym,
+            "pet_friendly": self.pet_friendly,
+            "pool": self.pool,
+            "is_logged_in": self.is_logged_in,
+            "tenant_actions": [action.to_dict() for action in self.tenant_actions]
+        }
+
 
     @staticmethod
     def from_json(json_data: dict) -> 'TenantPreferenceDetails':
