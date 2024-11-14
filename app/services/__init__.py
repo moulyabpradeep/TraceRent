@@ -1,3 +1,3 @@
-from .tenant_service import TenantService
-from .property_service import PropertyService
-#from .user_service import UserService
+from .tenant_service import *
+from .property_service import *
+from .user_service import *

@@ -1,142 +1,140 @@
-CREATE DATABASE trace_rent_ai;
-
+-- Create the database and use it
+CREATE DATABASE IF NOT EXISTS trace_rent_ai;
 USE trace_rent_ai;
 
+CREATE TABLE `user` (
+  `user_id` INT PRIMARY KEY AUTO_INCREMENT,
+  `username` VARCHAR(255),
+  `password` VARCHAR(255),
+  `name` VARCHAR(255),
+  `email` VARCHAR(255),
+  `phone` VARCHAR(15)
+);
 
-CREATE TABLE `tenant_personal_details` (
-  `user_id` integer PRIMARY KEY,
-  `name` varchar(255),
-  `email` varchar(255),
-  `phone` integer,
-  `province` varchar(255),
-  `dob` date
+
+-- Create Tenant Category Table
+CREATE TABLE `tenant_category` (
+  `tent_cat_id` INT PRIMARY KEY,
+  `tent_category` VARCHAR(255)
+);
+
+-- Create Property Category Table
+CREATE TABLE `property_category` (
+  `prop_cat_id` INT PRIMARY KEY,
+  `prop_category` VARCHAR(255)
+);
+
+-- Create Tenant Preferred Properties Table
+CREATE TABLE `tenant_preferred_properties` (
+  `tent_cat_id` INT,
+  `prop_cat_id` INT,
+  FOREIGN KEY (`tent_cat_id`) REFERENCES `tenant_category` (`tent_cat_id`),
+  FOREIGN KEY (`prop_cat_id`) REFERENCES `property_category` (`prop_cat_id`)
+);
+-- Create Property Data Table
+CREATE TABLE `property_data` (
+  `unit_id` INT PRIMARY KEY,
+  `unit_number` INT,
+  `prop_cat_id` INT,
+  `prop_name` VARCHAR(255),
+  `prop_type` VARCHAR(255),
+  `no_of_rooms` VARCHAR(255),
+  `area_code` VARCHAR(255),
+  `province` VARCHAR(255),
+  `country` VARCHAR(255),
+  `address` VARCHAR(255),
+  `rent` DECIMAL(10, 2),
+  `lease_length` VARCHAR(255),
+  FOREIGN KEY (`prop_cat_id`) 
+    REFERENCES `property_category` (`prop_cat_id`) 
+    ON DELETE CASCADE  -- Add this line for cascading delete
+);
+
+-- Create Location Table
+CREATE TABLE `location` (
+  `id` INT PRIMARY KEY AUTO_INCREMENT,
+  `unit_id` INT,
+  `apt_unit_number` VARCHAR(50),
+  `street_name` VARCHAR(255),
+  `community` VARCHAR(255),
+  `city` VARCHAR(255),
+  `province` VARCHAR(255),
+  `country` VARCHAR(255),
+  `latitude` VARCHAR(50),
+  `longitude` VARCHAR(50),
+  FOREIGN KEY (`unit_id`) 
+    REFERENCES `property_data` (`unit_id`) 
+    ON DELETE CASCADE  -- Add this line for cascading delete
+);
+
+
+-- Create Amenities Table
+CREATE TABLE `amenities` (
+  `id` INT PRIMARY KEY AUTO_INCREMENT,
+  `unit_id` INT,
+  `accessibility` VARCHAR(255),
+  `parking` INT,
+  `gym` BOOLEAN,
+  `kids_playarea` BOOLEAN,
+  `party_hall` BOOLEAN,
+  `backyard` BOOLEAN,
+  `deck` BOOLEAN,
+  `in_house_laundry` BOOLEAN,
+  `visitor_parking` BOOLEAN,
+  `pool` BOOLEAN,
+  `pet_friendly` BOOLEAN,
+ FOREIGN KEY (`unit_id`) 
+    REFERENCES `property_data` (`unit_id`) 
+    ON DELETE CASCADE  -- Add this line for cascading delete
+);
+
+-- Create Tenant Financial Preferences Table
+CREATE TABLE `tenant_financial_preferences` (
+  `user_id` INT PRIMARY KEY,
+  `monthly_income` INT,
+  `monthly_savings` INT,
+  `monthly_debt` INT,
+  `rent_percentage` INT,
+  FOREIGN KEY (`user_id`) REFERENCES `user` (`user_id`)
 );
 
 CREATE TABLE `tenant_preference_details` (
-  `user_id` integer PRIMARY KEY,
-  `tent_cat_id` integer,
-  `province` varchar(255),
-  `country` varchar(255),
-  `pets_preference` varchar(255),
-  `family_with_kids` varchar(255),
-  `amenities` varchar(255)
+  `id` INT PRIMARY KEY AUTO_INCREMENT,
+  `session_id` VARCHAR(255) UNIQUE,
+  `user_id` INT NULL,
+  `tenant_category_id` INT,
+  `location_category_id` INT,
+  `budget_category_id` INT,
+  `school_proximity` INT,
+  `hospital_proximity` INT,
+  `transit_proximity` INT,
+  `in_house_laundry` BOOLEAN,
+  `gym` BOOLEAN,
+  `pet_friendly` BOOLEAN,
+  `pool` BOOLEAN,
+  `is_logged_in` BOOLEAN,
+  FOREIGN KEY (`tenant_category_id`) REFERENCES `tenant_category` (`tent_cat_id`),
+  CONSTRAINT unique_user_session UNIQUE (`user_id`, `session_id`)
 );
 
-CREATE TABLE `tenant_category` (
-  `tent_cat_id` integer PRIMARY KEY,
-  `tent_category` varchar(255)
+-- Optional index on `user_id` for faster lookups by user
+CREATE INDEX idx_user_id ON `tenant_preference_details` (`user_id`);
+
+-- Create Tenant Actions Table
+CREATE TABLE `tenant_actions` (
+  `action_id` INT AUTO_INCREMENT PRIMARY KEY,
+  `tenant_preference_details_id` INT,
+  `unit_id` INT,
+  `is_viewed` BOOLEAN DEFAULT FALSE,
+  `is_liked` BOOLEAN DEFAULT FALSE,
+  `is_contacted` BOOLEAN DEFAULT FALSE,
+  FOREIGN KEY (`tenant_preference_details_id`) REFERENCES `tenant_preference_details` (`id`),
+  FOREIGN KEY (`unit_id`) REFERENCES `property_data` (`unit_id`) ON DELETE CASCADE
 );
 
-CREATE TABLE `property_category` (
-  `prop_cat_id` integer PRIMARY KEY,
-  `prop_category` varchar(255)
-);
-
-CREATE TABLE `tenant_preferred_properties` (
-  `id` integer PRIMARY KEY,
-  `tent_cat_id` integer,
-  `prop_cat_id` integer
-);
-
-CREATE TABLE `property_Data` (
-  `prop_cat_id` integer,
-  `unit_id` integer PRIMARY KEY,
-  `prop_name` varchar(255),
-  `prop_type` varchar(255),
-  `no_of_rooms` varchar(255),
-  `area_code` varchar(255),
-  `province` varchar(255),
-  `country` varchar(255),
-  `address` varchar(255),
-  `rent` decimal,
-  `lease_length` varchar(255)
-);
-
-CREATE TABLE `behaviour_data` (
-  `user_id` integer PRIMARY KEY,
-  `prop_searched` integer,
-  `prop_viewed` integer,
-  `prop_saved` integer
-);
-
-CREATE TABLE `location` (
-  `unit_id` INTEGER PRIMARY KEY,      -- Unique identifier for the unit
-  `apt_unit_number` VARCHAR(50),      -- Apartment or Unit number
-  `street_name` VARCHAR(255),         -- Street name
-  `community` VARCHAR(255),           -- Community name
-  `city` VARCHAR(255),                -- City name
-  `province` VARCHAR(255),            -- Province or state
-  `country` VARCHAR(255),             -- Country
-  `latitude` VARCHAR(50),             -- Latitude coordinates
-  `longitude` VARCHAR(50)             -- Longitude coordinates
-);
-
-
-CREATE TABLE `amenities` (
-  `unit_id` integer PRIMARY KEY,
-  `accessibility` varchar(255),
-  `parking` integer,
-  `gym` varchar(255),
-  `kids_playarea` varchar(255),
-  `party_hall` varchar(255),
-  `backyard` varchar(255),
-  `deck` varchar(255),
-  `laundary` varchar(255),
-  `visitor_parking` varchar(255),
-  `pool` varchar(255)
-);
-
-CREATE TABLE `user` (
-  `user_id` integer PRIMARY KEY,
-  `username` varchar(255),
-  `password` varchar(255)
-);
-
-CREATE TABLE `tenant_financial_preferences` (
-  `user_id` integer PRIMARY KEY,
-  `monthly_income` integer,
-  `monthly_savings` integer,
-  `monthly_debt` integer,
-  `rent_percentage` integer
-);
-
-CREATE TABLE `areas` (
-  `area_id` INTEGER PRIMARY KEY AUTO_INCREMENT,  -- Unique identifier for each area
-  `community` VARCHAR(255),                      -- Community name
-  `city` VARCHAR(255),                           -- City name
-  `province` VARCHAR(255),                       -- Province or state
-  `country` VARCHAR(255)                         -- Country
-);
-
-
-ALTER TABLE `tenant_personal_details` ADD FOREIGN KEY (`user_id`) REFERENCES `user` (`user_id`);
-
-ALTER TABLE `tenant_preference_details` ADD FOREIGN KEY (`user_id`) REFERENCES `user` (`user_id`);
-
-ALTER TABLE `tenant_preference_details` ADD FOREIGN KEY (`tent_cat_id`) REFERENCES `tenant_category` (`tent_cat_id`);
-
-ALTER TABLE `tenant_preferred_properties` ADD FOREIGN KEY (`tent_cat_id`) REFERENCES `tenant_category` (`tent_cat_id`);
-
-ALTER TABLE `tenant_preferred_properties` ADD FOREIGN KEY (`prop_cat_id`) REFERENCES `property_category` (`prop_cat_id`);
-
-ALTER TABLE `property_Data` ADD FOREIGN KEY (`prop_cat_id`) REFERENCES `property_category` (`prop_cat_id`);
-
-ALTER TABLE `behaviour_data` ADD FOREIGN KEY (`user_id`) REFERENCES `user` (`user_id`);
-
-ALTER TABLE `behaviour_data` ADD FOREIGN KEY (`prop_searched`) REFERENCES `property_Data` (`unit_id`);
-
-ALTER TABLE `behaviour_data` ADD FOREIGN KEY (`prop_viewed`) REFERENCES `property_Data` (`unit_id`);
-
-ALTER TABLE `behaviour_data` ADD FOREIGN KEY (`prop_saved`) REFERENCES `property_Data` (`unit_id`);
-
-ALTER TABLE `location` ADD FOREIGN KEY (`unit_id`) REFERENCES `property_Data` (`unit_id`);
-
-ALTER TABLE `amenities` ADD FOREIGN KEY (`unit_id`) REFERENCES `property_Data` (`unit_id`);
-
-ALTER TABLE `tenant_financial_preferences` ADD FOREIGN KEY (`user_id`) REFERENCES `user` (`user_id`);
 
 -- Insert static data for tenant categories
-INSERT INTO tenant_category (tent_cat_id, tent_category) 
+INSERT INTO `tenant_category` (`tent_cat_id`, `tent_category`) 
 VALUES 
   (1, 'Singles'),
   (2, 'Couple'),
@@ -144,9 +142,30 @@ VALUES
   (4, 'Roommates');
   
 -- Insert static data for property categories
-INSERT INTO property_category (prop_cat_id, prop_category) 
+INSERT INTO `property_category` (`prop_cat_id`, `prop_category`) 
 VALUES 
   (1, 'Studio apartment'),
   (2, '1-bedroom apartment'),
   (3, '2-bedroom apartment'),
   (4, '3-bedroom apartment');
+
+
+
+-- Insert statements for tenant preferred properties
+INSERT INTO `tenant_preferred_properties` (`tent_cat_id`, `prop_cat_id`) 
+VALUES 
+  -- Singles preferences
+  (1, 1),  -- Singles - Studio apartment
+  (1, 2),  -- Singles - 1-bedroom apartment
+  
+  -- Couple preferences
+  (2, 2),  -- Couple - 1-bedroom apartment
+ --  (2, 1),  -- Couple - Studio apartment (if economy)
+
+  -- Family preferences
+  (3, 3),  -- Family - 2-bedroom apartment
+  (3, 4),  -- Family - 3-bedroom apartment
+
+  -- Roommates preferences
+  (4, 2),  -- Roommates - 1-bedroom apartment
+  (4, 3);  -- Roommates - 2-bedroom apartment
