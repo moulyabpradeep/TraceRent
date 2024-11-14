@@ -1,15 +1,14 @@
 # tenant_dal.py
 
-from sqlalchemy.orm import Session, aliased
+from sqlalchemy.orm import Session
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from app.models.tenant import TenantPersonalDetails, TenantPreferenceDetails
 from app.models.property import TenantActions
 from app.db_queries import *
 from app.data_access_objects.daos import TenantActionsData, TenantActionFilterType
-from sqlalchemy.exc import SQLAlchemyError
-from typing import List, Optional
 from app.models.property import PropertyData
+from sqlalchemy.orm import joinedload, subqueryload
 
 # CRUD for tenant_personal_details
 def get_tenant(db: Session, user_id: int):
@@ -248,18 +247,31 @@ def get_tenant_preference_id(db: Session, user_id: int):
         return None  # Return None if no preference record is found for the user
 
 
-from sqlalchemy.orm import joinedload
 
-def get_properties_by_tenant_action_filter(db, user_id):#filter_type
+def get_properties_by_tenant_action_filter(db, user_id, filter_type: TenantActionFilterType):
+    # Initialize the query
+    query = db.query(TenantPreferenceDetails).options(
+        # Eager load tenant_actions
+        joinedload(TenantPreferenceDetails.tenant_actions)
+        .joinedload(TenantActions.property_data)  # Eager load PropertyData
+        .options(
+            joinedload(PropertyData.location),  # Eager load Location (one-to-one)
+            joinedload(PropertyData.amenities),  # Eager load Amenities (one-to-one)
+            subqueryload(PropertyData.property_media)  # Eager load PropertyMedia (one-to-many)
+        )
+    ).filter(TenantPreferenceDetails.user_id == user_id)  # Filter by user_id
+
+    # Apply the dynamic filter based on filter_type
+    if filter_type.upper() == "LIKED":
+        query = query.filter(TenantActions.is_liked == True)  # Filter for liked properties
+    elif filter_type.upper() == "DISLIKED":
+        query = query.filter(TenantActions.is_liked == False)  # Filter for disliked properties
+    elif filter_type.upper() == "CONTACTED":
+        query = query.filter(TenantActions.is_contacted == True)  # Filter for contacted properties
     
-    # Query TenantActions where `is_liked` is True and `user_id` matches
-    tenant_preferences = (
-    db.query(TenantPreferenceDetails)
-    .options(joinedload(TenantPreferenceDetails.tenant_actions))  # Eager load tenant_actions
-    .filter(TenantPreferenceDetails.user_id == 6)
-    .all())
-    
+    # Execute the query and return the results
+    tenant_preferences = query.all()
+
     # Convert results to dictionary format
     response = [tpd.to_dict() for tpd in tenant_preferences]
     return response
-

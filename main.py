@@ -436,7 +436,9 @@ def get_liked_properties():
             return create_rating_standard_response(success=False, message=const.NO_DATA_MSG,
                                                    status_code=HTTPStatus.BAD_REQUEST)
         # TODO: Replace `[]` with actual database method call to fetch liked properties as a JSON array
-        liked_properties = get_properties_by_action(data.get("user_id"), data.get("filter_type"))
+        filter = const.LIKED_FILTER
+        liked_properties = []
+        liked_properties = get_properties_by_action(data.get("user_id"), filter)
 
         if liked_properties:
             logger.info("Liked properties fetched successfully.")
@@ -474,8 +476,9 @@ def get_disliked_properties():
             return create_rating_standard_response(success=False, message=const.NO_DATA_MSG,
                                                    status_code=HTTPStatus.BAD_REQUEST)
         # TODO: Replace `[]` with actual database method call to fetch diliked properties as a JSON array
-        filter = const.LIKED_FILTER
+        filter = const.DISLIKED_FILTER
         disliked_properties = []
+        disliked_properties = get_properties_by_action(data.get("user_id"), filter)
 
         if disliked_properties:
             logger.info("Disliked properties fetched successfully.")
@@ -513,6 +516,8 @@ def get_contacted_properties():
                                                    status_code=HTTPStatus.BAD_REQUEST)
         # TODO: Replace `[]` with actual database method call to fetch contacted properties as a JSON array
         contacted_properties = []
+        filter = const.CONTACTED_FILTER
+        contacted_properties = get_properties_by_action(data.get("user_id"), filter)
 
         if contacted_properties:
             logger.info("Contacted properties fetched successfully.")

@@ -78,9 +78,10 @@ def get_properties_by_action(user_id:int, filter_type:TenantActionFilterType):
     # Initialize the database session
     db = SessionLocal()
     print(user_id, filter_type)
+    
     # Fetch properties in bulk using the optimized DAL function
-    properties_data = get_properties_by_tenant_action_filter(db, user_id)
-    print(properties_data)
+    properties_data = get_properties_by_tenant_action_filter(db, user_id, filter_type)
+    
     # Close the database session
     db.close()
 

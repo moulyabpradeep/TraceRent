@@ -61,3 +61,10 @@ class TenantActionFilterType(Enum):
     DISLIKED = "DISLIKED"
     CONTACTED = "CONTACTED"
 
+    @classmethod
+    def get_by_value(cls, value: str):
+        """Return the enum member for a given value."""
+        try:
+            return cls[value.upper()]  # Ensure the value is case-insensitive
+        except KeyError:
+            raise ValueError(f"{value} is not a valid TenantActionFilterType.")
