@@ -525,7 +525,7 @@ def get_contacted_properties():
                 success=True,
                 message=const.PROPERTIES_FETCH_SUCCESS_MSG,
                 status_code=HTTPStatus.OK,
-                additional_info={"disliked_properties": contacted_properties}
+                additional_info={"contacted_properties": contacted_properties}
             )
         else:
             logger.info("No properties found.")
