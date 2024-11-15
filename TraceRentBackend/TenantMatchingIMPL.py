@@ -94,24 +94,24 @@ def assign_points_for_distance(distance, min_distance):
     return points
 
 
-def assign_points_for_price(customer_price, property_price):
+def assign_points_for_price(customer_price, rent):
     """
     Assign points based on the percentage difference between the customer price and the property price.
     The lower price will be used as the benchmark.
 
     :param customer_price: float - The price the customer is looking for.
-    :param property_price: float - The price of the property.
+    :param rent: float - The price of the property.
     :return: float - Points based on the comparison.
     """
 
-    if customer_price<property_price:
+    if customer_price<rent:
         return 5;
 
     # Determine the minimum price as the benchmark
-    min_price = min(customer_price, property_price)
+    min_price = min(customer_price, rent)
 
     # Calculate percentage difference
-    percentage_diff = ((property_price - min_price) / min_price) * 100
+    percentage_diff = ((rent - min_price) / min_price) * 100
 
     # Assign points based on percentage difference
     if percentage_diff <= 10:
@@ -154,8 +154,8 @@ def calculatePoints(customer_preferences, distance_points, price_points,
 def getMinimumPropertyPrice(data):
     min_price = float('inf')
     for obj in data:
-        if obj.property_price < min_price:
-            min_price = obj.property_price
+        if obj.rent < min_price:
+            min_price = obj.rent
     return int(min_price)
 
 
@@ -196,7 +196,7 @@ def assign_and_sort_property_list(data, customer_preferences, city, max_points):
     min_distance = getMinimumDistance(data)
 
     for value in data:
-        property_price = value.property_price
+        rent = value.rent
         property_coordinates = value.property_coordinates
         school_proximity = value.school_proximity
         hospital_proximity = value.hospital_proximity
@@ -207,7 +207,7 @@ def assign_and_sort_property_list(data, customer_preferences, city, max_points):
         pool = value.pool
         distance = value.distance
         distance_points = assign_points_for_distance(distance, min_distance)
-        price_points = assign_points_for_price(min_price, property_price)
+        price_points = assign_points_for_price(min_price, rent)
         school_proximity_points = proximity_points(customer_school_proximity_weight,school_proximity, 2000)
         hospital_proximity_points = proximity_points(customer_hospital_proximity_weight,hospital_proximity, 10000)
         transit_proximity_points = proximity_points(customer_transit_proximity_weight,transit_proximity, 1000)

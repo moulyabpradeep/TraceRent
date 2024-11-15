@@ -135,12 +135,12 @@ def update_user_id_in_preferences(user_id: int, session_id: str, is_logged_in: b
         db.close()
 
 
-def handle_tenant_actions(json_data):
+def handle_tenant_actions(json_data) -> bool:
     # Convert JSON to TenantActionsData object using the static method
     tenant_action_data = TenantActionsData.from_json(json_data)
     
     session = SessionLocal()
     try:
-        upsert_tenant_action(session, tenant_action_data)
+        return upsert_tenant_action(session, tenant_action_data)
     finally:
         session.close()

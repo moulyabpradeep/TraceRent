@@ -1,8 +1,11 @@
 # property_dal.py
 
 from sqlalchemy.orm import Session
-from app.models.property import PropertyData, TenantPreferredProperties
+from app.models.property import *
+from app.models.tenant import TenantPreferenceDetails, TenantActions, TenantPreferredProperties
 from sqlalchemy import func
+from app.data_access_objects.daos import TenantActionFilterType
+from sqlalchemy.orm import joinedload, subqueryload
 
 # CRUD for property_data
 
@@ -73,3 +76,67 @@ def get_all_properties_by_unit_ids(db: Session,unit_ids: list):
     finally:
         # Close the session
         db.close()
+
+
+
+
+def get_properties_by_tenant_action_filter(db, user_id, filter_type: TenantActionFilterType):
+    # Initialize the query
+    query = db.query(TenantPreferenceDetails).options(
+        # Eager load tenant_actions
+        joinedload(TenantPreferenceDetails.tenant_actions)
+        .joinedload(TenantActions.property_data)  # Eager load PropertyData
+        .options(
+            joinedload(PropertyData.location),  # Eager load Location (one-to-one)
+            joinedload(PropertyData.amenities),  # Eager load Amenities (one-to-one)
+            joinedload(PropertyData.property_owner_info),  # Eager load propertyOwnerInfo (one-to-one)
+            subqueryload(PropertyData.property_media)  # Eager load PropertyMedia (one-to-many)
+        )
+    ).filter(TenantPreferenceDetails.user_id == user_id)  # Filter by user_id
+
+    # Apply the dynamic filter based on filter_type
+    if filter_type.upper() == "LIKED":
+        query = query.filter(TenantActions.is_liked == True)  # Filter for liked properties
+    elif filter_type.upper() == "DISLIKED":
+        query = query.filter(TenantActions.is_liked == False)  # Filter for disliked properties
+    elif filter_type.upper() == "CONTACTED":
+        query = query.filter(TenantActions.is_contacted == True)  # Filter for contacted properties
+    
+    # Execute the query and return the results
+    tenant_preferences = query.all()
+
+    # Convert results to dictionary format
+    response = [tpd.to_dict() for tpd in tenant_preferences]
+    return response
+
+
+def get_property_by_unit_id(db, unit_id: int) -> dict:
+    # Initialize the query
+    property_data = db.query(PropertyData).options(
+        joinedload(PropertyData.location),  # Eager load Location (one-to-one)
+        joinedload(PropertyData.amenities),  # Eager load Amenities (one-to-one)
+        joinedload(PropertyData.property_owner_info),  # Eager load propertyOwnerInfo (one-to-one)
+        subqueryload(PropertyData.property_media)  # Eager load PropertyMedia (one-to-many)
+    ).filter(PropertyData.unit_id == unit_id).first()
+
+    # Check if property_data exists to avoid AttributeError
+    if not property_data:
+        return None  # or an empty dictionary {}, or handle it as needed
+
+    # Convert results to dictionary format
+    response = property_data.to_dict()
+    return response
+
+
+
+def get_property_owner(db, unit_id: int) -> dict:
+    # Initialize the query
+    property_owner = db.query(PropertyOwnerInfo).filter(PropertyOwnerInfo.unit_id == unit_id).first()
+
+    # Check if property_data exists to avoid AttributeError
+    if not property_owner:
+        return None  # or an empty dictionary {}, or handle it as needed
+
+    # Convert results to dictionary format
+    response = property_owner.to_dict()
+    return response

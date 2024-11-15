@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 import json
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, Union
 from enum import Enum
 
 
@@ -26,20 +26,33 @@ class UserPreferences:
     def from_json(json_data: dict) -> 'UserPreferences':
         return UserPreferences(**json_data)
 
-    
+
+
 @dataclass
 class UserData:
-    name_of_user: str
-    user_email: str
-    user_phone: str
-    user_password: str
-    session_id: str
-    user_id: int
+    name_of_user: Optional[str] = None
+    user_email: Optional[str] = None
+    user_phone: Optional[str] = None
+    user_password: Optional[str] = None
+    session_id: Optional[str] = None
+    user_id: Optional[int] = None
 
     @staticmethod
-    def from_json(json_str: str) -> 'UserData':
-        data = json.loads(json_str)
-        return UserData(**data)
+    def from_json(data: Union[str, dict]) -> 'UserData':
+        # If data is a JSON string, parse it to a dictionary
+        if isinstance(data, str):
+            data = json.loads(data)
+
+        # Return an instance of UserData, using ** to unpack dictionary values
+        return UserData(
+            name_of_user=data.get('name_of_user'),
+            user_email=data.get('user_email'),
+            user_phone=data.get('user_phone'),
+            user_password=data.get('user_password'),
+            session_id=data.get('session_id'),
+            user_id=data.get('user_id')
+        )
+
 
 
 class TenantActionsData(BaseModel):
