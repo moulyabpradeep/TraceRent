@@ -339,6 +339,7 @@ def categorize_properties_by_percent_close(sorted_property_list):
 
 
 def get_price_ranges(t):
+    print(t)
     start, end = t
     step = (end - start) // 3
 

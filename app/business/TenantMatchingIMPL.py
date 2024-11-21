@@ -186,9 +186,30 @@ def assign_and_sort_property_list(data:PropertyObject, customer_preferences, cit
     return sorted_points_list
 
 
-def getPriceRange(budget_category_id):
+def getPriceRange(budget_category_id:int):
     minMax = tcapi.getLocationResponse(budget_category_id)
     return minMax
+
+
+
+def get_price_ranges(t):
+    print(t)
+    start, end = t
+    step = (end - start) // 3
+
+
+    remainder = (end - start) % 3
+    if remainder != 0:
+        return [
+                   (start, start + step + (1 if i == 0 else 0)) for i, start in
+                   enumerate([start, start + step, start + 2 * step])
+               ] + [(start + 2 * step + 1, end)]
+
+    return [
+        (start, start + step),
+        (start + step, start + 2 * step),
+        (start + 2 * step, end),
+    ]
 
 
 def divide_range(input_tuple):

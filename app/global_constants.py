@@ -48,6 +48,7 @@ USER_UPDATE_FAILURE_MSG = "Failed to update user information. Please check the p
 MISSING_PRICE_PARAMS_MSG = "Both 'min_price' and 'max_price' parameters are required in the request."
 INVALID_PRICE_RANGE_MSG = "Invalid price range: 'min_price' cannot be greater than 'max_price'."
 MISSING_CITY_MSG = "City parameter is required and cannot be empty."
+MISSING_TENANT_CAT_ID_MSG = "Tenant Category parameter is required and cannot be empty."
 # Messages specific to properties rating
 PROPERITES_RATED_SUCCESS_MSG="Properties rated successfully."
 PROPERITES_RATED_FAILURE_MSG="Failure in Properties rating."

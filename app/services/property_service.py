@@ -70,9 +70,14 @@ def get_tenant_preferred_properties(db: Session, tenant_category_id: int):
     """Retrieve properties preferred by a tenant category."""
     return db.query(TenantPreferredProperties).filter(TenantPreferredProperties.tent_cat_id == tenant_category_id).all()
 
-def get_price_range(db: Session, tenant_category_id: int):
-    min_rent, max_rent = get_price_range_for_tenant_category(db, tenant_category_id)
-    return {"min_rent": min_rent, "max_rent": max_rent}
+def get_price_range(city: String, tenant_category_id: int):
+    db = SessionLocal()
+    
+    try:
+        return get_price_range_for_tenant_category(db, tenant_category_id)
+        # return {"min_rent": min_rent, "max_rent": max_rent}
+    finally:
+        db.close()
 
 def get_property_data(unit_id: int):
     # Initialize the database session

@@ -16,8 +16,11 @@ from app import global_constants as const
 from enum import Enum
 from app.services.static_data_loader import load_static_data
 
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)  # Allow all origins and methods by default
+
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -161,8 +164,9 @@ def tenantMatching(customer_preferences):
     city = customer_preferences.city
 
     # Accessing properties using the section names
-    priceRange = None#impl.get_price_range(tenant_category_id)
-    data = get_all_properties_on_tenant_budget_category(tenant_category_id,1000,2000)
+    # TODO: Dont call db again please, take this input from ui, ui has this value
+    priceRange = get_price_range(city, tenant_category_id)
+    data = get_all_properties_on_tenant_budget_category(tenant_category_id,priceRange[0],priceRange[1])
     #data = None#api.search_properties(customer_preferences, priceRange.index(budget_category_id-1))
     print(data)
     # Sample data (for testing)
@@ -282,10 +286,20 @@ def get_price_range_api():
                 message=const.MISSING_CITY_MSG,
                 status_code=HTTPStatus.BAD_REQUEST
             )
+            
+        # Check if tenant_cat_id is provided and is not empty
+        if 'tenant_cat_id' not in data or data.get('tenant_cat_id') is None or data.get('tenant_cat_id')==0:
+            logger.warning("tenant category id parameter is missing or empty.")
+            return create_range_standard_response(
+                success=False,
+                message=const.MISSING_TENANT_CAT_ID_MSG,
+                status_code=HTTPStatus.BAD_REQUEST
+            )
         city = data.get('city')
-        # TODO: Method to return tuple for max and min, parameter = city
-        price_range = (100, 1000) # replace with method(city)
-
+        tenant_cat_id = data.get('tenant_cat_id')
+        # TODO: Method to return tuple for max and min, parameter = city,tenant_cat_id
+        price_range = get_price_range(city, tenant_cat_id)
+        print(price_range)
         # Fetch the price ranges using the provided price range and city
         list = impl.get_price_ranges(price_range)
 
@@ -378,7 +392,7 @@ def sign_up_api():
         user = get_user_by_username(email)
         if user:
             logger.info("User already exists: %s", user)
-            return create_signup_response(success=False, message=const.USER_EXISTS_MSG, status_code=HTTPStatus.CONFLICT, additional_info={"user": str(user)})
+            return create_signup_response(success=False, message=const.USER_EXISTS_MSG, status_code=HTTPStatus.CONFLICT, additional_info={"data": str(user)})
 
         # Attempt user registration
         user_id = user_sign_up(data)
