@@ -249,7 +249,7 @@ def tenantMatching(customer_preferences):
 
 #API ROUTES
 # Define the route to access tenantMatching method
-@app.route('/tenantMatching', methods=['GET'])
+@app.route('/tenantMatching', methods=['POST'])
 @require_basic_auth
 def tenant_matching_api():
     # Get the JSON request body as a dictionary
@@ -265,7 +265,7 @@ def tenant_matching_api():
 
 
 # Empty method for getting price range
-@app.route('/priceRange', methods=['GET'])
+@app.route('/priceRange', methods=['POST'])
 @require_basic_auth
 def get_price_range_api():
     try:
@@ -410,7 +410,7 @@ def sign_up_api():
 
 
 # Method for logging in
-@app.route('/login', methods=['GET'])
+@app.route('/login', methods=['POST'])
 @require_basic_auth
 def login_api():
     try:
@@ -470,7 +470,7 @@ def like_dislike_property():
 
 
 # Empty method for getting liked properties
-@app.route('/likedProperties', methods=['GET'])
+@app.route('/likedProperties', methods=['POST'])
 @require_basic_auth
 def get_liked_properties():
     try:
@@ -512,7 +512,7 @@ def get_liked_properties():
 
 
 # Empty method for getting disliked properties
-@app.route('/dislikedProperties', methods=['GET'])
+@app.route('/dislikedProperties', methods=['POST'])
 @require_basic_auth
 def get_disliked_properties():
     try:
@@ -551,7 +551,7 @@ def get_disliked_properties():
         )
 
 
-@app.route('/contactedProperties', methods=['GET'])
+@app.route('/contactedProperties', methods=['POST'])
 @require_basic_auth
 def get_contacted_properties():
     try:
@@ -650,7 +650,7 @@ def contact_now():
         )
 
 
-@app.route('/propertyDetails', methods=['GET'])
+@app.route('/propertyDetails', methods=['POST'])
 @require_basic_auth
 def get_property_details_api():
     try:
