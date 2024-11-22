@@ -130,12 +130,20 @@ def getMinimumDistance(data:PropertyObject):
             min_dist = obj["distance"]
     return int(min_dist) if min_dist != float('inf') else None  # Return None if no valid distance is found
 
+from decimal import Decimal
 
-def calculateAndAddDistance(data:PropertyObject, customer_coordinates):
+def calculateAndAddDistance(data, customer_coordinates):
     for obj in data:
-        property_coordinates = (float(obj["latitude"]), float(obj["longitude"]))
-        obj["property_coordinates"]=property_coordinates
-        
+        # Ensure latitude and longitude are present
+        if "latitude" in obj and "longitude" in obj:
+            property_coordinates = (
+                float(obj["latitude"]),  # Convert from Decimal to float
+                float(obj["longitude"])
+            )
+            obj["property_coordinates"] = property_coordinates
+        else:
+            print("Missing keys in object:", obj)
+        print(obj["property_coordinates"])
         obj["distance"] = calculate_distance(property_coordinates, customer_coordinates)
         
     return data
