@@ -356,3 +356,15 @@ def get_price_ranges(t):
         (start + step, start + 2 * step),
         (start + 2 * step, end),
     ]
+
+
+
+def decrypt_password(encrypted_password: str, password: str) -> str:
+    """Decrypt an encrypted password using AES and base32 decoding."""
+    key = generate_key(password)
+    encrypted_data = base64.b32decode(encrypted_password.encode())
+    iv, encrypted = encrypted_data[:16], encrypted_data[16:]
+    cipher = Cipher(algorithms.AES(key), modes.CFB(iv), backend=default_backend())
+    decryptor = cipher.decryptor()
+    decrypted_password = decryptor.update(encrypted) + decryptor.finalize()
+    return decrypted_password.decode()

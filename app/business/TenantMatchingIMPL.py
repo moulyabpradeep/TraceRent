@@ -4,6 +4,16 @@ from collections import defaultdict
 from geopy.geocoders import Nominatim
 from geopy.distance import geodesic
 from typing import List
+from TraceRentBackend.TenantMatchingIMPL import generate_key
+
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+import os
+import base64
+import configparser
+from pathlib import Path
 
 def get_city_coordinates(city_name):
     geolocator = Nominatim(user_agent="city_locator")
@@ -315,3 +325,6 @@ def categorize_properties_by_percent_close(sorted_property_list):
 
     # Convert defaultdict to regular dict
     return dict(percent_range_dict)
+
+
+

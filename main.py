@@ -3,6 +3,7 @@ from functools import wraps
 import configparser
 from app.DataAccessObjects.DAOs import PropertyObject
 from app.business import TenantMatchingIMPL as impl
+from TraceRentBackend import TenantMatchingIMPL as impl2
 import os
 from pathlib import Path
 from app.DataAccessObjects import DAOs
@@ -429,8 +430,8 @@ def login_api():
             return create_login_response(success=False, message=const.USER_NOT_FOUND_MSG, status_code=HTTPStatus.NOT_FOUND)
 
         user_password_from_db = user.get("password")
-        decoded_password_from_db = impl.decrypt_password(user_password_from_db, decoded_password)
-
+        decoded_password_from_db = impl2.decrypt_password(user_password_from_db, decoded_password)
+        print(decoded_password_from_db)
         # Validate password
         if user_password_from_db and decoded_password_from_db == decoded_password:
             return create_login_response(success=True, message=const.USER_FOUND_MSG, status_code=HTTPStatus.OK, user_info=user)
