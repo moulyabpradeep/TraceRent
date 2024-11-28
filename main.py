@@ -386,6 +386,10 @@ def sign_up_api():
         if not data or "user_email" not in data:
             logger.warning("Invalid input for email.")
             return create_signup_response(success=False, message=const.INVALID_EMAIL_MSG, status_code=HTTPStatus.BAD_REQUEST)
+        
+        if not data or "user_password" not in data:
+            logger.warning("Invalid input for password.")
+            return create_signup_response(success=False, message=const.INVALID_EMAIL_MSG, status_code=HTTPStatus.BAD_REQUEST)
 
         email = data.get("user_email")
 
@@ -396,6 +400,7 @@ def sign_up_api():
             return create_signup_response(success=False, message=const.USER_EXISTS_MSG, status_code=HTTPStatus.CONFLICT, additional_info={"data": str(user)})
 
         # Attempt user registration
+        data['user_password'] = impl.encrypt_password(data['user_password'])
         user_id = user_sign_up(data)
         if user_id:
             logger.info("User saved successfully with User ID: %s", user_id)
@@ -409,7 +414,6 @@ def sign_up_api():
         return create_signup_response(success=False, message=const.GENERAL_ERROR_MSG, status_code=HTTPStatus.INTERNAL_SERVER_ERROR)
 
 
-# Method for logging in
 @app.route('/login', methods=['POST'])
 @require_basic_auth
 def login_api():
@@ -430,10 +434,10 @@ def login_api():
             return create_login_response(success=False, message=const.USER_NOT_FOUND_MSG, status_code=HTTPStatus.NOT_FOUND)
 
         user_password_from_db = user.get("password")
-        decoded_password_from_db = impl2.decrypt_password(user_password_from_db, decoded_password)
-        print(decoded_password_from_db)
-        # Validate password
-        if user_password_from_db and decoded_password_from_db == decoded_password:
+        decoded_password_from_db = impl.decrypt_password(user_password_from_db, decoded_password)
+
+        # Compare the decrypted password (as raw bytes) with the provided password
+        if user_password_from_db and decoded_password_from_db == decoded_password.encode():  # Compare as bytes
             return create_login_response(success=True, message=const.USER_FOUND_MSG, status_code=HTTPStatus.OK, user_info=user)
         else:
             return create_login_response(success=False, message=const.PASSWORD_INCORRECT_MSG, status_code=HTTPStatus.UNAUTHORIZED, user_info=None)

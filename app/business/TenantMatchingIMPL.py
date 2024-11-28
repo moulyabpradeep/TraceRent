@@ -1,11 +1,9 @@
-from app.DataAccessObjects.DAOs import PropertyObject
+import math
 from app.routes import TraceRentAPIInvoker as tcapi
 from collections import defaultdict
 from geopy.geocoders import Nominatim
 from geopy.distance import geodesic
 from typing import List
-from TraceRentBackend.TenantMatchingIMPL import generate_key
-
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.backends import default_backend
@@ -14,6 +12,77 @@ import os
 import base64
 import configparser
 from pathlib import Path
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from app.DataAccessObjects.DAOs import PropertyObject
+
+config = configparser.ConfigParser()
+config_path = Path(__file__).resolve().parent.parent.parent / 'config.ini'  # Adjust this if necessary
+config.read(config_path)
+
+# Read the thresholds_points as a string and clean it
+thresholds_points_str = config.get('tenant_matching_data', 'thresholds_points').strip()
+
+# Function to parse the threshold points
+def parse_thresholds(thresholds_str):
+    return [
+        (int(pair.split(',')[0].strip()), float(pair.split(',')[1].strip()))
+        for pair in thresholds_str.split(';')
+    ]
+
+
+# Parse the thresholds points
+thresholds_points = parse_thresholds(thresholds_points_str)
+# Get fixed salt from config
+salt = config.get('authentication', 'salt')
+
+def generate_key(password: str) -> bytes:
+    """
+    Generate a symmetric encryption key from a password and fixed salt.
+    """
+    kdf = PBKDF2HMAC(
+        algorithm=hashes.SHA256(),
+        length=32,  # Length of the key (AES-256)
+        salt=salt.encode(),  # Convert the salt to bytes
+        iterations=100000,  # Increase iterations for better security
+        backend=default_backend()
+    )
+    return kdf.derive(password.encode())  # Derive the key from the password
+
+def encrypt_password(password: str) -> str:
+    """
+    Encrypt a password using AES and encode the result with base32 to avoid special characters.
+    """
+    key = generate_key(password)  # Generate the symmetric key using the password
+    iv = os.urandom(16)  # Generate a random IV (Initialization Vector) for AES
+    cipher = Cipher(algorithms.AES(key), modes.CFB(iv), backend=default_backend())  # AES encryption setup
+    encryptor = cipher.encryptor()
+    encrypted = encryptor.update(password.encode()) + encryptor.finalize()  # Encrypt the password
+
+    # Concatenate IV and encrypted password, then encode as base32 to avoid special characters
+    encrypted_password = base64.b32encode(iv + encrypted).decode('utf-8')  # Ensure it is decoded to string
+    return encrypted_password
+
+def decrypt_password(encrypted_password: str, password: str) -> bytes:
+    """
+    Decrypt an encrypted password using AES and base32 decoding.
+    This method returns binary data instead of decoding into a string.
+    """
+    key = generate_key(password)  # Generate the symmetric key using the password
+    encrypted_data = base64.b32decode(encrypted_password.encode('utf-8'))  # Decode from base32 to bytes
+
+    # Check that the encrypted data is long enough to contain the IV and encrypted text
+    if len(encrypted_data) < 16:
+        raise ValueError("Invalid encrypted data (IV length mismatch).")
+
+    iv, encrypted = encrypted_data[:16], encrypted_data[16:]  # Extract the IV (first 16 bytes) and the rest as encrypted data
+
+    cipher = Cipher(algorithms.AES(key), modes.CFB(iv), backend=default_backend())  # AES decryption setup
+    decryptor = cipher.decryptor()
+    decrypted_password = decryptor.update(encrypted) + decryptor.finalize()  # Decrypt the password
+    return decrypted_password  # Return the decrypted data as bytes
+
 
 def get_city_coordinates(city_name):
     geolocator = Nominatim(user_agent="city_locator")
@@ -28,74 +97,82 @@ def get_city_coordinates(city_name):
 def calculate_distance(coord1, coord2):
     # coord1 and coord2 should be tuples of the form (latitude, longitude)
     distance = geodesic(coord1, coord2).kilometers  # You can use .miles for distance in miles
-    
     return distance
 
 
 def assign_points_for_distance(distance, min_distance):
-    if distance<=min_distance:
-        return 5
-
-    percentage_diff = ((distance - min_distance) / min_distance) * 100
-
-    if percentage_diff <= 10:
-        points = 5
-    elif 10 < percentage_diff < 20:
-        points = 4.5
-    elif 20 <= percentage_diff < 25:
-        points = 4
-    elif 25 <= percentage_diff < 30:
-        points = 3.5
-    elif 30 <= percentage_diff < 35:
-        points = 3
-    elif 35 <= percentage_diff < 40:
-        points = 2.5
-    elif 40 <= percentage_diff < 45:
-        points = 2
-    else:
-        points = 1.5 if percentage_diff <= 50 else 1
-
-    return points
-
-
-def assign_points_for_price(customer_price, rent):
     """
-    Assign points based on the percentage difference between the customer price and the property price.
-    The lower price will be used as the benchmark.
+    Assigns points based on the distance compared to a minimum threshold.
 
-    :param customer_price: float - The price the customer is looking for.
-    :param rent: float - The price of the property.
-    :return: float - Points based on the comparison.
+    Parameters:
+        distance (float): The actual distance to evaluate.
+        min_distance (float): The minimum threshold distance for maximum points.
+
+    Returns:
+        float: Points awarded based on the distance percentage difference from the minimum.
     """
+    default_points = 1.0  # Points if distance exceeds 50% of min_distance
 
-    if customer_price<rent:
-        return 5
+    # If distance is less than or equal to minimum, award max points
+    if distance <= min_distance:
+        return 5.0
 
-    # Determine the minimum price as the benchmark
-    min_price = min(customer_price, rent)
+    # Calculate the percentage difference
+    percentage_difference = ((distance - min_distance) / min_distance) * 100
 
-    # Calculate percentage difference
-    percentage_diff = ((rent - min_price) / min_price) * 100
+    # Find the appropriate points based on percentage difference
+    for threshold, points in thresholds_points:
+        if percentage_difference <= threshold:
+            return points
 
-    # Assign points based on percentage difference
-    if percentage_diff <= 10:
-        points = 5
-    elif 10 < percentage_diff < 20:
-        points = 4.5
-    elif 20 <= percentage_diff < 25:
-        points = 4
-    elif 25 <= percentage_diff < 30:
-        points = 3.5
-    elif 30 <= percentage_diff < 35:
-        points = 3
-    elif 35 <= percentage_diff < 40:
-        points = 2.5
-    elif 40 <= percentage_diff < 45:
-        points = 2
-    else:
-        points = 1.5 if percentage_diff <= 50 else 1
+    # Return default points if no threshold matches
+    return default_points
 
-    return points
+
+def assign_points_for_price(customer_price, property_price):
+    """
+    Assigns points based on the percentage difference between the customer price and the property price,
+    using the lower price as the benchmark.
+
+    Parameters:
+        customer_price (float): The price the customer is willing to pay.
+        property_price (float): The price of the property.
+
+    Returns:
+        float: Points awarded based on the price comparison.
+    """
+    print('CUSTOMER PRICE'+str(customer_price))
+    print('PROPERTY PRICE' + str(property_price))
+    # Check if the customer price is less than or equal to the property price
+    if property_price <= customer_price:
+        return 5.0  # Max points for reasonable price range (this logic might change as needed)
+
+    # Read the thresholds_points_price from the config and parse it
+    thresholds_points_price_str = config.get('tenant_matching_data', 'thresholds_points_price').strip()
+    thresholds_points_price = parse_thresholds(thresholds_points_price_str)
+
+    default_points = 1.0  # Points if percentage difference exceeds all defined thresholds
+
+    # Use the minimum price as the benchmark for calculating percentage difference
+    min_price = min(customer_price, property_price)
+
+    # Avoid division by zero if min_price is zero (although this should not happen in a valid context)
+    if min_price == 0:
+        return default_points
+
+    # Calculate the percentage difference between the prices
+    percentage_difference = ((property_price - min_price) / min_price) * 100
+
+    # Debug: print percentage difference to understand the flow
+    print(f"Percentage difference: {percentage_difference}%")
+
+    # Assign points based on the percentage difference and thresholds
+    for threshold, points in thresholds_points_price:
+        if percentage_difference <= threshold:
+            return points
+
+    # Return default points if no threshold matches
+    return default_points
 
 
 def calculatePoints(customer_preferences, distance_points, price_points,
@@ -130,7 +207,9 @@ def getMinimumDistance(data:PropertyObject):
             min_dist = obj["distance"]
     return int(min_dist) if min_dist != float('inf') else None  # Return None if no valid distance is found
 
+
 from decimal import Decimal
+
 
 def calculateAndAddDistance(data, customer_coordinates):
     for obj in data:
@@ -209,27 +288,6 @@ def getPriceRange(budget_category_id:int):
     return minMax
 
 
-
-def get_price_ranges(t):
-    print(t)
-    start, end = t
-    step = (end - start) // 3
-
-
-    remainder = (end - start) % 3
-    if remainder != 0:
-        return [
-                   (start, start + step + (1 if i == 0 else 0)) for i, start in
-                   enumerate([start, start + step, start + 2 * step])
-               ] + [(start + 2 * step + 1, end)]
-
-    return [
-        (start, start + step),
-        (start + step, start + 2 * step),
-        (start + 2 * step, end),
-    ]
-
-
 def divide_range(input_tuple):
     a, b = input_tuple
     range_step = 300
@@ -300,39 +358,93 @@ def proximity_points(weight, proximity, benchmark):
 
 
 def categorize_properties_by_percent_close(sorted_property_list):
+    """
+    Categorizes properties into ranges based on their percent_close attribute.
+
+    Parameters:
+        sorted_property_list (list): A list of property objects, each with a percent_close attribute.
+
+    Returns:
+        dict: A dictionary where keys are range labels, and values are lists of properties within each range.
+    """
+
+    # Define percent ranges and their corresponding labels
+    percent_ranges_str = config.get('tenant_matching_data', 'percent_ranges')
+    percent_ranges = [
+        (int(r.split('-')[0]), int(r.split('-')[1]), f"{r.split('-')[0]}-{r.split('-')[1]}")
+        for r in percent_ranges_str.split(', ')
+    ]
+
+    # Initialize a dictionary to store properties categorized by ranges
     percent_range_dict = defaultdict(list)
 
-    # Iterate over the sorted list of properties and categorize based on percent_close
+    # Iterate over the properties and categorize each by percent_close
     for property_obj in sorted_property_list:
-        percent_close = property_obj["percent_close"]
+        percent_close = property_obj['percent_close']
 
-        # Determine the percent range
-        if percent_close >= 90:
-            range_key = "100-90"
-        elif percent_close >= 80:
-            range_key = "89-80"
-        elif percent_close >= 70:
-            range_key = "79-70"
-        elif percent_close >= 60:
-            range_key = "69-60"
-        elif percent_close >= 50:
-            range_key = "59-50"
-        elif percent_close >= 40:
-            range_key = "49-40"
-        elif percent_close >= 30:
-            range_key = "39-30"
-        elif percent_close >= 20:
-            range_key = "29-20"
-        elif percent_close >= 10:
-            range_key = "19-10"
-        elif percent_close >= 0:
-            range_key = "9-0"
+        # Find the appropriate range for the percent_close value
+        for min_range, max_range, label in percent_ranges:
+            if min_range <= percent_close <= max_range:
+                percent_range_dict[label].append(property_obj)
+                break  # Stop once the correct range is found
 
-        # Add the property to the appropriate range
-        percent_range_dict[range_key].append(property_obj)
-
-    # Convert defaultdict to regular dict
+    # Return the dictionary containing categorized properties
     return dict(percent_range_dict)
+
+
+def get_price_ranges(t):
+    start, end = t
+    step = (end - start) // 3
+    remainder = (end - start) % 3
+
+    if remainder != 0:
+        # Distribute the remainder across the first ranges
+        return [
+            (start, start + step + (1 if remainder > 0 else 0)),  # First range gets an extra 1 if remainder exists
+            (start + step + (1 if remainder > 0 else 0), start + 2 * step + (1 if remainder > 1 else 0)),  # Second range gets an extra 1 if remainder > 1
+            (start + 2 * step + (1 if remainder > 1 else 0), end)  # Last range takes the rest
+        ]
+
+    return [
+        (start, start + step),
+        (start + step, start + 2 * step),
+        (start + 2 * step, end),
+    ]
+
+
+
+def send_email_to_owner(recipient_email):
+    # SMTP server configuration
+    smtp_server = config.get('email', 'smtp_server')
+    smtp_port = config.getint('email', 'smtp_port')
+    sender_email = config.get('email', 'sender_email')
+    sender_password = config.get('email', 'password')
+
+    # Email message content
+    subject = config.get('email', 'subject')
+    body = config.get('email', 'body')
+
+    # Debug output
+    print("Sending email from:", sender_email)
+
+    # Create the email message
+    message = MIMEMultipart()
+    message["From"] = sender_email
+    message["To"] = recipient_email
+    message["Subject"] = subject
+    message.attach(MIMEText(body, "plain"))
+
+    try:
+        # Connect to the SMTP server with SSL
+        with smtplib.SMTP_SSL(smtp_server, smtp_port) as server:
+            server.set_debuglevel(1)  # Enable debug output
+            server.login(sender_email, sender_password)
+            server.sendmail(sender_email, recipient_email, message.as_string())
+            print("Email sent successfully!")
+            return True
+    except Exception as e:
+        print(f"Failed to send email: {e}")
+        return False
 
 
 
