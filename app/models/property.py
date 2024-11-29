@@ -1,28 +1,13 @@
 # property.py
 
-from sqlalchemy import Column, Integer, String, ForeignKey, Boolean, Numeric
+from sqlalchemy import Column, Integer, String, ForeignKey, Boolean, Numeric, TIMESTAMP, func
 from sqlalchemy.orm import relationship
 from app.database_connect import Base
 from app.global_constants import (
     PROPERTY_CATEGORY_TABLE,
-    TENANT_CATEGORY_TABLE,
-    TENANT_PREFERRED_PROPERTIES_TABLE,
     PROPERTY_DATA_TABLE,
-    PROP_CAT_ID_COLUMN,
-    TENT_CAT_ID_COLUMN,
-    TENANT_ACTIONS_TABLE
+    PROP_CAT_ID_COLUMN
 )
-
-# Define a max recursion depth to prevent infinite loops
-MAX_RECURSION_DEPTH = 2
-
-# TenantPreferredProperties Model
-class TenantPreferredProperties(Base):
-    __tablename__ = TENANT_PREFERRED_PROPERTIES_TABLE
-    
-    id = Column(Integer, primary_key=True)
-    tent_cat_id = Column(Integer, ForeignKey(f'{TENANT_CATEGORY_TABLE}.{TENT_CAT_ID_COLUMN}'))
-    prop_cat_id = Column(Integer, ForeignKey(f'{PROPERTY_CATEGORY_TABLE}.{PROP_CAT_ID_COLUMN}'))
 
 # PropertyCategory Model
 class PropertyCategory(Base):
@@ -106,8 +91,12 @@ class Location(Base):
     city = Column(String(255))
     province = Column(String(255))
     country = Column(String(255))
-    latitude = Column(String(50))
-    longitude = Column(String(50))
+    zip_code = Column(String(255))
+    latitude = Column(Numeric(10, 7))
+    longitude = Column(Numeric(10, 7))
+    school_proximity=Column(Integer)
+    transit_proximity=Column(Integer)
+    hospital_proximity=Column(Integer)
     
     # Relationship to PropertyData
     property_data = relationship("PropertyData", back_populates="location")
@@ -120,8 +109,12 @@ class Location(Base):
             "city": self.city,
             "province": self.province,
             "country": self.country,
+            "zip_code":self.zip_code,
             "latitude": self.latitude,
-            "longitude": self.longitude
+            "longitude": self.longitude,
+            "school_proximity":self.school_proximity,
+            "transit_proximity":self.transit_proximity,
+            "hospital_proximity":self.hospital_proximity
         }
 
 # PropertyData Model    
@@ -134,11 +127,8 @@ class PropertyData(Base):
     prop_name = Column(String(255))
     prop_type = Column(String(255))
     no_of_rooms = Column(String(255))
-    area_code = Column(String(255))
-    province = Column(String(255))
-    country = Column(String(255))
-    address = Column(String(255))
     rent = Column(Numeric(10, 2))
+    area_sq_ft = Column(Numeric(10, 2))
     lease_length = Column(String(255))
     
     # Relationships
@@ -147,9 +137,24 @@ class PropertyData(Base):
     # One-to-one relationships
     location = relationship("Location", back_populates="property_data", uselist=False)
     amenities = relationship("Amenities", back_populates="property_data", uselist=False)
+    property_owner_info = relationship("PropertyOwnerInfo", back_populates="property_data", uselist=False)
     
     # One-to-many relationship
     property_media = relationship("PropertyMedia", back_populates="property_data", uselist=True)  # One-to-many
+    
+    def to_flat_dict(self):
+        return {
+            "unit_id": self.unit_id,
+            "unit_number": self.unit_number,
+            "prop_name": self.prop_name,
+            "prop_type": self.prop_type,
+            "no_of_rooms": self.no_of_rooms,
+            "rent": self.rent,
+            "area_sq_ft": self.area_sq_ft,
+            "lease_length": self.lease_length,
+            **(self.location.to_dict() if self.location else {}),
+            **(self.amenities.to_dict() if self.amenities else {})
+        }
     
     def to_dict(self):        
         return {
@@ -158,38 +163,39 @@ class PropertyData(Base):
             "prop_name": self.prop_name,
             "prop_type": self.prop_type,
             "no_of_rooms": self.no_of_rooms,
-            "area_code": self.area_code,
-            "province": self.province,
-            "country": self.country,
-            "address": self.address,
             "rent": str(self.rent),
+            "area_sq_ft": str(self.area_sq_ft),
             "lease_length": self.lease_length,
             "location": self.location.to_dict() if self.location else None,  # Include location
             "amenities": self.amenities.to_dict() if self.amenities else None,  # Include amenities
+            "property_owner_info": self.property_owner_info.to_dict() if self.property_owner_info else None,  # Include property_owner_info
             "property_media": [media.to_dict() for media in self.property_media] if self.property_media else []
         }
-
-
-# TenantActions Model
-class TenantActions(Base):
-    __tablename__ = 'tenant_actions'
-
-    action_id = Column(Integer, primary_key=True, autoincrement=True)
-    tenant_preference_details_id = Column(Integer, ForeignKey('tenant_preference_details.id'))
-    unit_id = Column(Integer, ForeignKey('property_data.unit_id', ondelete='CASCADE'))
-    is_liked = Column(Boolean, default=None)
-    is_contacted = Column(Boolean, default=None)
-
-    tenant_preference_details = relationship("TenantPreferenceDetails", back_populates="tenant_actions")
-    property_data = relationship("PropertyData", back_populates="tenant_actions")
+        
+# Property Owner Info Model
+class PropertyOwnerInfo(Base):
+    __tablename__ = 'property_owner_info'
+    
+    owner_id = Column(Integer, primary_key=True, autoincrement=True, index=True)
+    unit_id = Column(Integer, ForeignKey('property_data.unit_id', ondelete="CASCADE"), nullable=False)  # FK to PropertyData
+    first_name = Column(String(50), nullable=False)
+    last_name = Column(String(50), nullable=False)
+    email = Column(String(100))
+    phone = Column(String(15))
+    address = Column(String(255))
+    updated_at = Column(TIMESTAMP, default=func.current_timestamp(), onupdate=func.current_timestamp())
+    
+    # Relationship to PropertyData
+    property_data = relationship("PropertyData", back_populates="property_owner_info")
 
     def to_dict(self):
         return {
-            "action_id": self.action_id,
-            "tenant_preference_details_id": self.tenant_preference_details_id,
+            "owner_id": self.owner_id,
             "unit_id": self.unit_id,
-            "is_liked": self.is_liked,
-            "is_contacted": self.is_contacted,
-            "property_data": self.property_data.to_dict() if self.property_data else None
+            "first_name": self.first_name,
+            "last_name": self.last_name,
+            "email": self.email,
+            "phone": self.phone,
+            "address": self.address,
+            "updated_at": self.updated_at
         }
-        

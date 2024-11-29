@@ -4,6 +4,7 @@ from sqlalchemy.orm import sessionmaker
 import configparser
 import os
 
+
 # Load configuration from config.ini
 config = configparser.ConfigParser()
 config.read(os.path.join(os.path.dirname(__file__), '../config.ini'))

@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional
 import json
+from decimal import Decimal
 
 
 @dataclass
@@ -24,25 +25,12 @@ class UserPreferences:
     def from_json(json_data: dict) -> 'UserPreferences':
         return UserPreferences(**json_data)
 
-
-@dataclass
-class UserData:
-    name_of_user: Optional[str] = None
-    user_email: Optional[str] = None
-    user_phone: Optional[str] = None
-    user_password: Optional[str] = None
-    session_id: Optional[str] = None
-
-    @staticmethod
-    def from_json(json_str: str) -> 'UserData':
-        data = json.loads(json_str)
-        return UserData(**data)
-
-
 @dataclass
 class PropertyObject:
-    property_price: Optional[int] = None
+    rent: Optional[int] = None
     property_coordinates: Optional[tuple] = None
+    latitude: Optional[Decimal] = None
+    longitude: Optional[Decimal] = None
     school_proximity: Optional[int] = None
     hospital_proximity: Optional[int] = None
     transit_proximity: Optional[int] = None
@@ -57,6 +45,7 @@ class PropertyObject:
     hospital_proximity_points: Optional[int] = None
     transit_proximity_points: Optional[int] = None
     max_points: Optional[int] = None
+    points: Optional[int] = None
 
     @staticmethod
     def from_json(json_str: str) -> 'PropertyObject':

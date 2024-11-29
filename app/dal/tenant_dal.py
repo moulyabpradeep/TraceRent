@@ -3,12 +3,9 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
-from app.models.tenant import TenantPersonalDetails, TenantPreferenceDetails
-from app.models.property import TenantActions
+from app.models.tenant import TenantPersonalDetails, TenantPreferenceDetails, TenantActions
 from app.db_queries import *
-from app.data_access_objects.daos import TenantActionsData, TenantActionFilterType
-from app.models.property import PropertyData
-from sqlalchemy.orm import joinedload, subqueryload
+from app.data_access_objects.daos import TenantActionsData
 
 # CRUD for tenant_personal_details
 def get_tenant(db: Session, user_id: int):
@@ -194,7 +191,7 @@ class TenantPreferenceNotFoundError(Exception):
     """Custom exception for missing tenant preference details."""
     pass
 
-def upsert_tenant_action(session: Session, tenant_action_data: TenantActionsData):
+def upsert_tenant_action(session: Session, tenant_action_data: TenantActionsData) -> bool:
     try:
         # Determine `tenant_preference_details_id` based on session_id or user_id
         tenant_preference_details_id = get_tenant_preference_id(session, tenant_action_data.user_id)
@@ -224,18 +221,23 @@ def upsert_tenant_action(session: Session, tenant_action_data: TenantActionsData
             session.add(action)
 
         session.commit()
-        
+        return True  # Return True if commit is successful
+
     except TenantPreferenceNotFoundError as e:
         session.rollback()
-        print(f"Error: {e}")  # Log the error or raise it again based on the application's needs
+        print(f"Error: {e}")  # Log the error
+        return False  # Return False on this specific error
         
     except SQLAlchemyError as e:
         session.rollback()
-        print(f"Database error: {e}")  # Log the database error or handle it further
+        print(f"Database error: {e}")  # Log the database error
+        return False  # Return False on SQLAlchemy errors
 
     except Exception as e:
         session.rollback()
         print(f"Unexpected error: {e}")  # Handle any other unexpected errors
+        return False  # Return False on any other unexpected errors
+
 
 def get_tenant_preference_id(db: Session, user_id: int):
     # Fetch tenant_preference_details_id based on user_id
@@ -246,32 +248,3 @@ def get_tenant_preference_id(db: Session, user_id: int):
     else:
         return None  # Return None if no preference record is found for the user
 
-
-
-def get_properties_by_tenant_action_filter(db, user_id, filter_type: TenantActionFilterType):
-    # Initialize the query
-    query = db.query(TenantPreferenceDetails).options(
-        # Eager load tenant_actions
-        joinedload(TenantPreferenceDetails.tenant_actions)
-        .joinedload(TenantActions.property_data)  # Eager load PropertyData
-        .options(
-            joinedload(PropertyData.location),  # Eager load Location (one-to-one)
-            joinedload(PropertyData.amenities),  # Eager load Amenities (one-to-one)
-            subqueryload(PropertyData.property_media)  # Eager load PropertyMedia (one-to-many)
-        )
-    ).filter(TenantPreferenceDetails.user_id == user_id)  # Filter by user_id
-
-    # Apply the dynamic filter based on filter_type
-    if filter_type.upper() == "LIKED":
-        query = query.filter(TenantActions.is_liked == True)  # Filter for liked properties
-    elif filter_type.upper() == "DISLIKED":
-        query = query.filter(TenantActions.is_liked == False)  # Filter for disliked properties
-    elif filter_type.upper() == "CONTACTED":
-        query = query.filter(TenantActions.is_contacted == True)  # Filter for contacted properties
-    
-    # Execute the query and return the results
-    tenant_preferences = query.all()
-
-    # Convert results to dictionary format
-    response = [tpd.to_dict() for tpd in tenant_preferences]
-    return response

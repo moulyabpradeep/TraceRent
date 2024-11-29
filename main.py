@@ -3,6 +3,7 @@ from functools import wraps
 import configparser
 from app.DataAccessObjects.DAOs import PropertyObject
 from app.business import TenantMatchingIMPL as impl
+from TraceRentBackend import TenantMatchingIMPL as impl2
 import os
 from pathlib import Path
 from app.DataAccessObjects import DAOs
@@ -14,9 +15,13 @@ from http import HTTPStatus
 import logging
 from app import global_constants as const
 from enum import Enum
+from app.services.static_data_loader import load_static_data
 
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)  # Allow all origins and methods by default
+
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -29,6 +34,18 @@ class Filter(Enum):
     VIEWED = "VIEWED"
     CONTACTED = "CONTACTED"
 
+
+
+def main():
+    # Initialize a session
+    db = SessionLocal()
+    
+    # Load static data
+    load_static_data(db)
+    
+    # Your other logic here
+    print("==================Application started!=================")
+    
 
 # Utility functions
 def create_login_response(success: bool, message: str, status_code: int, user_info=None):
@@ -147,18 +164,16 @@ def tenantMatching(customer_preferences):
     budget_category_id = customer_preferences.budget_category_id
     city = customer_preferences.city
 
-    # Load properties
-    config = configparser.ConfigParser()
-    config.read(os.path.join(os.path.dirname(__file__), './config.ini'))
-
     # Accessing properties using the section names
-    priceRange = None#impl.get_price_range(tenant_category_id)
-    data = None#api.search_properties(customer_preferences, priceRange.index(budget_category_id-1))
-
+    # TODO: Dont call db again please, take this input from ui, ui has this value
+    priceRange = get_price_range(city, tenant_category_id)
+    data = get_all_properties_on_tenant_budget_category(tenant_category_id,priceRange[0],priceRange[1])
+    #data = None#api.search_properties(customer_preferences, priceRange.index(budget_category_id-1))
+    print(data)
     # Sample data (for testing)
-    data = [
+    """data = [
     PropertyObject(
-        property_price=1500,
+        rent=1500,
         property_coordinates=(42.333, -43.67),
         school_proximity=5,
         hospital_proximity=3,
@@ -169,7 +184,7 @@ def tenantMatching(customer_preferences):
         pool=True,
     ),
     PropertyObject(
-        property_price=1200,
+        rent=1200,
         property_coordinates=(49.6945782, -112.8331033),
         school_proximity=2,
         hospital_proximity=4,
@@ -180,7 +195,7 @@ def tenantMatching(customer_preferences):
         pool=False
     ),
     PropertyObject(
-        property_price=2000,
+        rent=2000,
         property_coordinates=(82.333, -93.67),
         school_proximity=1000000000,
         hospital_proximity=2000000,
@@ -191,7 +206,7 @@ def tenantMatching(customer_preferences):
         pool=True
     ),
     PropertyObject(
-        property_price=1000,
+        rent=1000,
         property_coordinates=(72.333, -33.67),
         school_proximity=30000,
         hospital_proximity=50000,
@@ -202,7 +217,7 @@ def tenantMatching(customer_preferences):
         pool=False
     ),
     PropertyObject(
-        property_price=1800,
+        rent=1800,
         property_coordinates=(32.333, -33.67),
         school_proximity=400,
         hospital_proximity=4000,
@@ -212,7 +227,7 @@ def tenantMatching(customer_preferences):
         pet_friendly=True,
         pool=True,
     ),
-    ]
+    ]"""
 
     if not data:
         return None
@@ -223,7 +238,7 @@ def tenantMatching(customer_preferences):
     sorted_property_list = impl.assign_and_sort_property_list(data, customer_preferences, city, max_points)
 
     for property_obj in sorted_property_list:
-        print(f"Property Price: {str(property_obj.property_price)}, Points: {str(property_obj.points)}")
+        print(f"Property Price: {property_obj['rent']}, Points: {property_obj['points']}")
 
     final_list = impl.add_percent_close(sorted_property_list, max_points)
 
@@ -234,7 +249,7 @@ def tenantMatching(customer_preferences):
 
 #API ROUTES
 # Define the route to access tenantMatching method
-@app.route('/tenantMatching', methods=['GET'])
+@app.route('/tenantMatching', methods=['POST'])
 @require_basic_auth
 def tenant_matching_api():
     # Get the JSON request body as a dictionary
@@ -250,17 +265,47 @@ def tenant_matching_api():
 
 
 # Empty method for getting price range
-@app.route('/priceRange', methods=['GET'])
+@app.route('/priceRange', methods=['POST'])
 @require_basic_auth
 def get_price_range_api():
     try:
+        # Check if the required parameters are present in the request
+        data = request.json
+        if data is None:
+            logger.warning("No data received for price range request.")
+            return create_range_standard_response(
+                success=False,
+                message=const.NO_DATA_MSG,
+                status_code=HTTPStatus.BAD_REQUEST
+            )
 
-        #TODO: Replace (0,1000) with method, return min and max as tuple
-        price_range = 0,1000
+        # Check if city is provided and is not empty
+        if 'city' not in data or data.get('city') is None or data.get('city')=="":
+            logger.warning("City parameter is missing or empty.")
+            return create_range_standard_response(
+                success=False,
+                message=const.MISSING_CITY_MSG,
+                status_code=HTTPStatus.BAD_REQUEST
+            )
+            
+        # Check if tenant_cat_id is provided and is not empty
+        if 'tenant_cat_id' not in data or data.get('tenant_cat_id') is None or data.get('tenant_cat_id')==0:
+            logger.warning("tenant category id parameter is missing or empty.")
+            return create_range_standard_response(
+                success=False,
+                message=const.MISSING_TENANT_CAT_ID_MSG,
+                status_code=HTTPStatus.BAD_REQUEST
+            )
+        city = data.get('city')
+        tenant_cat_id = data.get('tenant_cat_id')
+        # TODO: Method to return tuple for max and min, parameter = city,tenant_cat_id
+        price_range = get_price_range(city, tenant_cat_id)
+        print(price_range)
+        # Fetch the price ranges using the provided price range and city
+        list = impl.get_price_ranges(price_range)
 
-        if price_range:
+        if list:
             logger.info("Price range fetched successfully.")
-            list = impl.get_price_ranges(price_range)
             return create_range_standard_response(
                 success=True,
                 message=const.PRICE_RANGE_FETCH_SUCCESS_MSG,
@@ -268,8 +313,8 @@ def get_price_range_api():
                 additional_info={"price_range": list}
             )
         else:
-            logger.warning("Price range not found.")
-            return create_rating_standard_response(
+            logger.warning(f"No price range found for city: {city}.")
+            return create_range_standard_response(
                 success=False,
                 message=const.PRICE_RANGE_FETCH_FAILURE_MSG,
                 status_code=HTTPStatus.OK
@@ -277,7 +322,7 @@ def get_price_range_api():
 
     except Exception as e:
         logger.exception("Exception occurred while fetching price range.")
-        return create_rating_standard_response(
+        return create_range_standard_response(
             success=False,
             message=const.GENERAL_ERROR_MSG,
             status_code=HTTPStatus.INTERNAL_SERVER_ERROR
@@ -341,6 +386,10 @@ def sign_up_api():
         if not data or "user_email" not in data:
             logger.warning("Invalid input for email.")
             return create_signup_response(success=False, message=const.INVALID_EMAIL_MSG, status_code=HTTPStatus.BAD_REQUEST)
+        
+        if not data or "user_password" not in data:
+            logger.warning("Invalid input for password.")
+            return create_signup_response(success=False, message=const.INVALID_EMAIL_MSG, status_code=HTTPStatus.BAD_REQUEST)
 
         email = data.get("user_email")
 
@@ -348,9 +397,10 @@ def sign_up_api():
         user = get_user_by_username(email)
         if user:
             logger.info("User already exists: %s", user)
-            return create_signup_response(success=False, message=const.USER_EXISTS_MSG, status_code=HTTPStatus.CONFLICT, additional_info={"user": str(user)})
+            return create_signup_response(success=False, message=const.USER_EXISTS_MSG, status_code=HTTPStatus.CONFLICT, additional_info={"data": str(user)})
 
         # Attempt user registration
+        data['user_password'] = impl.encrypt_password(data['user_password'])
         user_id = user_sign_up(data)
         if user_id:
             logger.info("User saved successfully with User ID: %s", user_id)
@@ -364,8 +414,7 @@ def sign_up_api():
         return create_signup_response(success=False, message=const.GENERAL_ERROR_MSG, status_code=HTTPStatus.INTERNAL_SERVER_ERROR)
 
 
-# Method for logging in
-@app.route('/login', methods=['GET'])
+@app.route('/login', methods=['POST'])
 @require_basic_auth
 def login_api():
     try:
@@ -387,8 +436,8 @@ def login_api():
         user_password_from_db = user.get("password")
         decoded_password_from_db = impl.decrypt_password(user_password_from_db, decoded_password)
 
-        # Validate password
-        if user_password_from_db and decoded_password_from_db == decoded_password:
+        # Compare the decrypted password (as raw bytes) with the provided password
+        if user_password_from_db and decoded_password_from_db == decoded_password.encode():  # Compare as bytes
             return create_login_response(success=True, message=const.USER_FOUND_MSG, status_code=HTTPStatus.OK, user_info=user)
         else:
             return create_login_response(success=False, message=const.PASSWORD_INCORRECT_MSG, status_code=HTTPStatus.UNAUTHORIZED, user_info=None)
@@ -413,11 +462,11 @@ def like_dislike_property():
 
         # Check if properties were fetched successfully
         if rated is not None and rated == True:
-            logger.info("Properties fetched successfully for rating.")
-            return create_rating_standard_response(success=True, message=const.PROPERTIES_FETCH_SUCCESS_MSG, status_code=HTTPStatus.OK, additional_info={"rated": rated})
+            logger.info("Properties rated successfully .")
+            return create_rating_standard_response(success=True, message=const.PROPERITES_RATED_SUCCESS_MSG, status_code=HTTPStatus.OK, additional_info={"rated": rated})
         else:
-            logger.info("Unable to fetch properties")
-            return create_rating_standard_response(success=False, message=const.PROPERTIES_FETCH_FAILURE_MSG, status_code=HTTPStatus.OK)
+            logger.info("Unable to rate the property")
+            return create_rating_standard_response(success=False, message=const.PROPERITES_RATED_FAILURE_MSG, status_code=HTTPStatus.OK)
 
     except Exception as e:
         logger.exception("Exception occurred during property rating.")
@@ -425,7 +474,7 @@ def like_dislike_property():
 
 
 # Empty method for getting liked properties
-@app.route('/likedProperties', methods=['GET'])
+@app.route('/likedProperties', methods=['POST'])
 @require_basic_auth
 def get_liked_properties():
     try:
@@ -439,7 +488,8 @@ def get_liked_properties():
         filter = const.LIKED_FILTER
         liked_properties = []
         liked_properties = get_properties_by_action(data.get("user_id"), filter)
-
+        
+        
         if liked_properties:
             logger.info("Liked properties fetched successfully.")
             return create_standard_response(
@@ -466,7 +516,7 @@ def get_liked_properties():
 
 
 # Empty method for getting disliked properties
-@app.route('/dislikedProperties', methods=['GET'])
+@app.route('/dislikedProperties', methods=['POST'])
 @require_basic_auth
 def get_disliked_properties():
     try:
@@ -505,7 +555,7 @@ def get_disliked_properties():
         )
 
 
-@app.route('/contactedProperties', methods=['GET'])
+@app.route('/contactedProperties', methods=['POST'])
 @require_basic_auth
 def get_contacted_properties():
     try:
@@ -543,9 +593,172 @@ def get_contacted_properties():
             status_code=HTTPStatus.INTERNAL_SERVER_ERROR
         )
 
+@app.route('/contactNow', methods=['POST'])
+@require_basic_auth
+def contact_now():
+    try:
+        # Get the data from the request body
+        data = request.json
+        if data is None or 'unit_id' not in data or data.get('unit_id') is None or 'user_id' not in data or data.get('user_id') is None:
+            logger.warning("No data received for contacting.")
+            return create_standard_response(
+                success=False,
+                message=const.NO_DATA_MSG,
+                status_code=HTTPStatus.BAD_REQUEST
+            )
+
+        # Extract required fields from data
+        recipient_email = None
+        unit_id = data.get('unit_id')
+        user_id = data.get('user_id')
+        #TODO: Replace contact_Info = None with your method
+        contact_info = None
+        # Validate the recipient_email
+        if not contact_info or 'email' not in contact_info:
+            logger.warning("No information fetched.")
+            return create_standard_response(
+                success=False,
+                message="No Contact information fetched from Database.",
+                status_code=HTTPStatus.BAD_REQUEST
+            )
+
+        recipient_email = contact_info('email')
+
+        # Call the send_email_to_owner method to send the email
+        success = impl.send_email_to_owner(recipient_email)
+
+        if success:
+            #TODO: Replace user_id = None with your method to add unit id to contacted properties
+            #user_id = None
+            logger.info(f"Email sent to {recipient_email} successfully.")
+            return create_standard_response(
+                success=True,
+                message="Email sent successfully.",
+                status_code=HTTPStatus.OK,
+                additional_info={"property_details": contact_info}
+            )
+        else:
+            logger.error(f"Failed to send email to {recipient_email}.")
+            return create_standard_response(
+                success=False,
+                message="Failed to send the email. Please try again later.",
+                status_code=HTTPStatus.INTERNAL_SERVER_ERROR
+            )
+
+    except Exception as e:
+        logger.exception("Exception occurred while handling the email request.")
+        return create_standard_response(
+            success=False,
+            message=const.GENERAL_ERROR_MSG,
+            status_code=HTTPStatus.INTERNAL_SERVER_ERROR
+        )
+
+
+@app.route('/propertyDetails', methods=['POST'])
+@require_basic_auth
+def get_property_details_api():
+    try:
+        data = request.json
+        print(data)
+        if data is None:
+            logger.warning("No data received for property details.")
+            return create_standard_response(
+                success=False,
+                message=const.NO_DATA_MSG,
+                status_code=HTTPStatus.BAD_REQUEST
+            )
+
+        # Extract unit_id from the request data
+        if 'unit_id' not in data or data.get("unit_id") is None or data.get("unit_id") == "":
+            logger.warning("No unit_id provided in the request.")
+            return create_standard_response(
+                success=False,
+                message=const.MISSING_UNIT_ID_MSG,
+                status_code=HTTPStatus.BAD_REQUEST
+            )
+        unit_id = data.get("unit_id")
+        # TODO: Replace None with actual database method call to fetch the property details based on unit_id
+        property_details = None  # Replace with actual database call, e.g., db.get_property_details(unit_id)
+        property_details= get_property_details(unit_id)
+        
+        if property_details:
+            logger.info(f"Property details for unit_id {unit_id} fetched successfully.")
+            return create_standard_response(
+                success=True,
+                message=const.PROPERTIES_FETCH_SUCCESS_MSG,
+                status_code=HTTPStatus.OK,
+                additional_info={"property_details": property_details}
+            )
+        else:
+            logger.info(f"No property found for unit_id {unit_id}.")
+            return create_standard_response(
+                success=False,
+                message=const.PROPERTIES_FETCH_FAILURE_MSG,
+                status_code=HTTPStatus.OK
+            )
+
+    except Exception as e:
+        logger.exception("Exception occurred while fetching property details.")
+        return create_standard_response(
+            success=False,
+            message=const.GENERAL_ERROR_MSG,
+            status_code=HTTPStatus.INTERNAL_SERVER_ERROR
+        )
+
+@app.route('/updateUserInfo', methods=['PUT'])
+@require_basic_auth
+def update_user_info_api():
+    try:
+        data = request.json
+        if data is None or 'user_id' not in data or data.get("user_id")=="":
+            logger.warning("No user id data received for user info update.")
+            return create_standard_response(
+                success=False,
+                message=const.NO_DATA_MSG,
+                status_code=HTTPStatus.BAD_REQUEST
+            )
+
+        # Extract user_id from the request data
+        user_id = data.get("user_id")
+        if not user_id:
+            logger.warning("No user_id provided in the request.")
+            return create_standard_response(
+                success=False,
+                message=const.MISSING_USER_ID_MSG,
+                status_code=HTTPStatus.BAD_REQUEST
+            )
+
+        # TODO: Replace update_success with actual database method call to update user info based on user_id
+        user_data = UserData.from_json(data)
+        update_success=update_user_account(user_data)
+        #update_success = True #true for now
+
+        if update_success:
+            logger.info(f"User info for user_id {user_id} updated successfully.")
+            return create_standard_response(
+                success=True,
+                message=const.USER_UPDATE_SUCCESS_MSG,
+                status_code=HTTPStatus.OK
+            )
+        else:
+            logger.info(f"Failed to update user info for user_id {user_id}.")
+            return create_standard_response(
+                success=False,
+                message=const.USER_UPDATE_FAILURE_MSG,
+                status_code=HTTPStatus.OK
+            )
+
+    except Exception as e:
+        logger.exception("Exception occurred while updating user info.")
+        return create_standard_response(
+            success=False,
+            message=const.GENERAL_ERROR_MSG,
+            status_code=HTTPStatus.INTERNAL_SERVER_ERROR
+        )
 
 #uncomment for api testing
 if __name__ == '__main__':
+    main()
     app.run(debug=True)
 
 

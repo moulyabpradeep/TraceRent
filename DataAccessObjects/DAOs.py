@@ -42,7 +42,7 @@ class UserData:
 
 @dataclass
 class PropertyObject:
-    property_price: Optional[int] = None
+    rent: Optional[int] = None
     property_coordinates: Optional[tuple] = None
     school_proximity: Optional[int] = None
     hospital_proximity: Optional[int] = None

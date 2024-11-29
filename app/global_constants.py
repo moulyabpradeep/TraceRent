@@ -40,3 +40,15 @@ VIEWED_FILTER = "VIEWED"
 CONTACTED_FILTER = "CONTACTED"
 PRICE_RANGE_FETCH_SUCCESS_MSG = "Price range fetched successfully"
 PRICE_RANGE_FETCH_FAILURE_MSG = "Unable to fetch price range"
+# Messages specific to update user info
+MISSING_USER_ID_MSG = "The 'user_id' parameter is required in the request."
+USER_UPDATE_SUCCESS_MSG = "User information updated successfully."
+USER_UPDATE_FAILURE_MSG = "Failed to update user information. Please check the provided details and try again."
+# Messages specific to price range fetching
+MISSING_PRICE_PARAMS_MSG = "Both 'min_price' and 'max_price' parameters are required in the request."
+INVALID_PRICE_RANGE_MSG = "Invalid price range: 'min_price' cannot be greater than 'max_price'."
+MISSING_CITY_MSG = "City parameter is required and cannot be empty."
+MISSING_TENANT_CAT_ID_MSG = "Tenant Category parameter is required and cannot be empty."
+# Messages specific to properties rating
+PROPERITES_RATED_SUCCESS_MSG="Properties rated successfully."
+PROPERITES_RATED_FAILURE_MSG="Failure in Properties rating."
