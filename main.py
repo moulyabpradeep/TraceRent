@@ -759,7 +759,7 @@ def update_user_info_api():
 #uncomment for api testing
 if __name__ == '__main__':
     main()
-    app.run(debug=True)
+    app.run(debug=True, port=8080)
 
 
 #uncomment for local testing
