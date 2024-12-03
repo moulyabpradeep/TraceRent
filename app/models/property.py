@@ -157,8 +157,10 @@ class PropertyData(Base):
             "area_sq_ft": self.area_sq_ft,
             "lease_length": self.lease_length,
             **(self.location.to_dict() if self.location else {}),
-            **(self.amenities.to_dict() if self.amenities else {})
-        }
+            **(self.amenities.to_dict() if self.amenities else {}),
+            "property_media": [media.to_dict() for media in self.property_media] if self.property_media else []
+    }
+        
     
     def to_dict(self):        
         return {

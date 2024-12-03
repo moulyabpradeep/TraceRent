@@ -487,7 +487,7 @@ def get_liked_properties():
         # TODO: Replace `[]` with actual database method call to fetch liked properties as a JSON array
         filter = const.LIKED_FILTER
         liked_properties = []
-        liked_properties = get_properties_by_action(data.get("user_id"), filter)
+        liked_properties = get_properties_by_action(data.get("user_id"),data.get("session_id"), filter)
         
         
         if liked_properties:
@@ -528,7 +528,7 @@ def get_disliked_properties():
         # TODO: Replace `[]` with actual database method call to fetch diliked properties as a JSON array
         filter = const.DISLIKED_FILTER
         disliked_properties = []
-        disliked_properties = get_properties_by_action(data.get("user_id"), filter)
+        disliked_properties = get_properties_by_action(data.get("user_id"),data.get("session_id"), filter)
 
         if disliked_properties:
             logger.info("Disliked properties fetched successfully.")
@@ -567,7 +567,7 @@ def get_contacted_properties():
         # TODO: Replace `[]` with actual database method call to fetch contacted properties as a JSON array
         contacted_properties = []
         filter = const.CONTACTED_FILTER
-        contacted_properties = get_properties_by_action(data.get("user_id"), filter)
+        contacted_properties = get_properties_by_action(data.get("user_id"),data.get("session_id"), filter)
 
         if contacted_properties:
             logger.info("Contacted properties fetched successfully.")

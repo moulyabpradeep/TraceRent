@@ -122,13 +122,13 @@ def get_properties_data(unit_ids: list):
     return response
 
 
-def get_properties_by_action(user_id:int, filter_type:TenantActionFilterType):
+def get_properties_by_action(user_id:int,session_id:int, filter_type:TenantActionFilterType):
     # Initialize the database session
     db = SessionLocal()
     print(user_id, filter_type)
     
     # Fetch properties in bulk using the optimized DAL function
-    properties_data = get_properties_by_tenant_action_filter(db, user_id, filter_type)
+    properties_data = get_properties_by_tenant_action_filter(db, user_id,session_id, filter_type)
     
     # Close the database session
     db.close()
