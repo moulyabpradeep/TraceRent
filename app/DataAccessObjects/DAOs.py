@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, List, Dict, Any
 import json
 from decimal import Decimal
 
@@ -46,6 +46,7 @@ class PropertyObject:
     transit_proximity_points: Optional[int] = None
     max_points: Optional[int] = None
     points: Optional[int] = None
+    property_media: Optional[List[Dict[str, Any]]] = None  # JSON array of JSON objects
 
     @staticmethod
     def from_json(json_str: str) -> 'PropertyObject':
