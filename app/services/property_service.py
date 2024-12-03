@@ -42,7 +42,8 @@ def get_all_properties_on_tenant_budget_category(tenant_cat_id: int, min_rent: f
         # Query PropertyData with preferred property categories and rent range filters
         results = db.query(PropertyData).options(
             joinedload(PropertyData.location),
-            joinedload(PropertyData.amenities)
+            joinedload(PropertyData.amenities),
+            subqueryload(PropertyData.property_media)  # Eager load PropertyMedia (one-to-many)
         ).filter(
             and_(
                 PropertyData.prop_cat_id.in_(preferred_properties),
