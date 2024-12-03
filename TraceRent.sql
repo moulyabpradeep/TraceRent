@@ -39,6 +39,7 @@ CREATE TABLE `property_data` (
   `prop_cat_id` INT,
   `prop_name` VARCHAR(255),
   `prop_type` VARCHAR(255),
+  `prop_description` VARCHAR(255),
   `no_of_rooms` VARCHAR(255),
   `no_of_baths` VARCHAR(255),
   `rent` INT,

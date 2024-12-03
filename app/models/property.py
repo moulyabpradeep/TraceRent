@@ -128,6 +128,7 @@ class PropertyData(Base):
     prop_type = Column(String(255))
     no_of_rooms = Column(String(255))
     no_of_baths = Column(String(255))
+    prop_description = Column(String(255))
     rent = Column(Numeric(10, 2))
     area_sq_ft = Column(Numeric(10, 2))
     lease_length = Column(String(255))
@@ -151,6 +152,7 @@ class PropertyData(Base):
             "prop_type": self.prop_type,
             "no_of_rooms": self.no_of_rooms,
             "no_of_baths": self.no_of_baths,
+            "prop_description": self.prop_description,
             "rent": self.rent,
             "area_sq_ft": self.area_sq_ft,
             "lease_length": self.lease_length,
@@ -166,6 +168,7 @@ class PropertyData(Base):
             "prop_type": self.prop_type,
             "no_of_rooms": self.no_of_rooms,
             "no_of_baths": self.no_of_baths,
+            "prop_description": self.prop_description,
             "rent": str(self.rent),
             "area_sq_ft": str(self.area_sq_ft),
             "lease_length": self.lease_length,

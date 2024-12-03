@@ -29,7 +29,7 @@ def get_properties_by_category(db: Session, category_id: int):
     return db.query(PropertyData).filter(PropertyData.prop_cat_id == category_id).all()
 
 
-def get_all_properties_on_tenant_budget_category(tenant_cat_id: int, min_rent: float, max_rent: float):
+def get_all_properties_on_tenant_budget_category(tenant_cat_id: int, min_rent: float, max_rent: float, city:str):
     # Initialize the database session
     db = SessionLocal()
     
@@ -37,16 +37,17 @@ def get_all_properties_on_tenant_budget_category(tenant_cat_id: int, min_rent: f
     cache = DataCache()
     # Fetch preferred property categories for the specified tenant category ID
     preferred_properties = cache.get_preferred_properties(tenant_cat_id)
-    print(preferred_properties)
+    print(f"The preferred_properties  are: {preferred_properties} and city: {city}")
     try:
         # Query PropertyData with preferred property categories and rent range filters
-        results = db.query(PropertyData).options(
-            joinedload(PropertyData.location),
+        results = db.query(PropertyData).join(Location).options(
+            joinedload(PropertyData.location),  # Eager load location
             joinedload(PropertyData.amenities),
             subqueryload(PropertyData.property_media)  # Eager load PropertyMedia (one-to-many)
         ).filter(
             and_(
                 PropertyData.prop_cat_id.in_(preferred_properties),
+                Location.city == city,  # Use Location.city to filter by city
                 PropertyData.rent >= min_rent,
                 PropertyData.rent <= max_rent
             )

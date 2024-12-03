@@ -167,9 +167,9 @@ def tenantMatching(customer_preferences):
     # Accessing properties using the section names
     # TODO: Dont call db again please, take this input from ui, ui has this value
     priceRange = get_price_range(city, tenant_category_id)
-    data = get_all_properties_on_tenant_budget_category(tenant_category_id,priceRange[0],priceRange[1])
+    data = get_all_properties_on_tenant_budget_category(tenant_category_id,priceRange[0],priceRange[1],city)
     #data = None#api.search_properties(customer_preferences, priceRange.index(budget_category_id-1))
-    print(data)
+    
     # Sample data (for testing)
     """data = [
     PropertyObject(
@@ -237,8 +237,8 @@ def tenantMatching(customer_preferences):
 
     sorted_property_list = impl.assign_and_sort_property_list(data, customer_preferences, city, max_points)
 
-    for property_obj in sorted_property_list:
-        print(f"Property Price: {property_obj['rent']}, Points: {property_obj['points']}")
+    #for property_obj in sorted_property_list:
+        #print(f"Property Price: {property_obj['rent']}, Points: {property_obj['points']}")
 
     final_list = impl.add_percent_close(sorted_property_list, max_points)
 
@@ -254,7 +254,7 @@ def tenantMatching(customer_preferences):
 def tenant_matching_api():
     # Get the JSON request body as a dictionary
     requestJSON = request.json
-
+    
     # Parse the JSON into a UserPreferences object
     customer_preferences = DAOs.UserPreferences.from_json(requestJSON)
     result = tenantMatching(customer_preferences)
@@ -479,7 +479,7 @@ def like_dislike_property():
 def get_liked_properties():
     try:
         data = request.json
-        print(data)
+        
         if data is None:
             logger.warning("No data received for property rating.")
             return create_rating_standard_response(success=False, message=const.NO_DATA_MSG,
@@ -659,7 +659,7 @@ def contact_now():
 def get_property_details_api():
     try:
         data = request.json
-        print(data)
+       
         if data is None:
             logger.warning("No data received for property details.")
             return create_standard_response(

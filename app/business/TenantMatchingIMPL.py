@@ -113,6 +113,9 @@ def assign_points_for_distance(distance, min_distance):
     """
     default_points = 1.0  # Points if distance exceeds 50% of min_distance
 
+    if min_distance==0:
+        min_distance=0.1
+
     # If distance is less than or equal to minimum, award max points
     if distance <= min_distance:
         return 5.0
@@ -249,7 +252,7 @@ def assign_and_sort_property_list(data:PropertyObject, customer_preferences, cit
     customer_transit_proximity_weight = customer_preferences.transit_proximity
     customer_hospital_proximity_weight = customer_preferences.hospital_proximity
     min_distance = getMinimumDistance(data)
-
+    print(min_distance)
     for value in data:
         rent = value["rent"]
         school_proximity = value["school_proximity"]
@@ -260,6 +263,7 @@ def assign_and_sort_property_list(data:PropertyObject, customer_preferences, cit
         pet_friendly = value["pet_friendly"]
         pool = value["pool"]
         distance = value["distance"]
+        print(distance)
         distance_points = assign_points_for_distance(distance, min_distance)
         price_points = assign_points_for_price(min_price, rent)
         school_proximity_points = proximity_points(customer_school_proximity_weight,school_proximity, 2000)
