@@ -45,7 +45,9 @@ class PropertyObject:
     hospital_proximity_points: Optional[int] = None
     transit_proximity_points: Optional[int] = None
     max_points: Optional[int] = None
-    points: Optional[int] = None
+    points: Optional[int] = None  
+    price_points: Optional[int] = None
+    distance_points:Optional[int] = None
     property_media: Optional[List[Dict[str, Any]]] = None  # JSON array of JSON objects
 
     @staticmethod

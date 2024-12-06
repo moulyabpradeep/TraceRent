@@ -111,10 +111,12 @@ def assign_points_for_distance(distance, min_distance):
     Returns:
         float: Points awarded based on the distance percentage difference from the minimum.
     """
+    print('PROP DIST'+str(distance))
+    print('mindist' +str(min_distance))
     default_points = 1.0  # Points if distance exceeds 50% of min_distance
 
     if min_distance==0:
-        min_distance=0.1
+        min_distance=1
 
     # If distance is less than or equal to minimum, award max points
     if distance <= min_distance:
@@ -200,15 +202,19 @@ def getMinimumPropertyPrice(data: PropertyObject):
     for obj in data:
         if obj["rent"] < min_price:
             min_price = obj["rent"]
-    return int(min_price)
+    print("&&&&&&&&&&&&&&&&&&&&&&&&")
+    print(str(float(min_price)))
+    return float(min_price)
 
 
 def getMinimumDistance(data:PropertyObject):
-    min_dist = float('inf')
-    for obj in data:
+   min_dist = float('inf')
+   for obj in data:
         if obj["distance"] is not None and obj["distance"] < min_dist and obj["distance"] != 0:  # Check if distance is set
+            print("%%%%%%%%%%%%%%%%%%%%%%")
+            print(str(obj["property_coordinates"]))
             min_dist = obj["distance"]
-    return int(min_dist) if min_dist != float('inf') else None  # Return None if no valid distance is found
+   return float(min_dist) if min_dist != float('inf') else None  # Return None if no valid distance is found
 
 
 from decimal import Decimal
@@ -263,7 +269,7 @@ def assign_and_sort_property_list(data:PropertyObject, customer_preferences, cit
         pet_friendly = value["pet_friendly"]
         pool = value["pool"]
         distance = value["distance"]
-        print(distance)
+        print(str(min_distance))
         distance_points = assign_points_for_distance(distance, min_distance)
         price_points = assign_points_for_price(min_price, rent)
         school_proximity_points = proximity_points(customer_school_proximity_weight,school_proximity, 2000)
@@ -278,6 +284,8 @@ def assign_and_sort_property_list(data:PropertyObject, customer_preferences, cit
         value["hospital_proximity_points"] = hospital_proximity_points
         value["transit_proximity_points"] = transit_proximity_points
         value["max_points"] = max_points
+        value["price_points"] = price_points
+        value["distance_points"] = distance_points
 
         value["points"] = points
         print(value)
