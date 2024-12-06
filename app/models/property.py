@@ -94,6 +94,7 @@ class Location(Base):
     zip_code = Column(String(255))
     latitude = Column(Numeric(10, 7))
     longitude = Column(Numeric(10, 7))
+    location_cat_id=Column(Integer)
     school_proximity=Column(Integer)
     transit_proximity=Column(Integer)
     hospital_proximity=Column(Integer)
@@ -112,6 +113,7 @@ class Location(Base):
             "zip_code":self.zip_code,
             "latitude": self.latitude,
             "longitude": self.longitude,
+            "location_cat_id":self.location_cat_id,
             "school_proximity":self.school_proximity,
             "transit_proximity":self.transit_proximity,
             "hospital_proximity":self.hospital_proximity

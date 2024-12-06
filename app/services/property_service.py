@@ -30,8 +30,8 @@ def get_properties_by_category(db: Session, category_id: int):
 
 
 def get_all_properties_on_tenant_budget_category(
-    tenant_cat_id: int, min_rent: float, max_rent: float, city: str, session_id=None, user_id=None
-):
+    tenant_cat_id: int, min_rent: float, max_rent: float, city: str, location_cat_id: int,
+    session_id=None, user_id=None):
     # Initialize the database session
     db = SessionLocal()
 
@@ -52,6 +52,7 @@ def get_all_properties_on_tenant_budget_category(
             and_(
                 PropertyData.prop_cat_id.in_(preferred_properties),
                 Location.city == city,
+                Location.location_cat_id == location_cat_id,
                 PropertyData.rent >= min_rent,
                 PropertyData.rent <= max_rent
             )

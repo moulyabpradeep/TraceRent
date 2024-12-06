@@ -162,6 +162,7 @@ def tenantMatching(customer_preferences):
     bucket_list = None
     tenant_category_id = customer_preferences.tenant_category_id
     budget_category_id = customer_preferences.budget_category_id
+    location_category_id=customer_preferences.location_category_id
     city = customer_preferences.city
     session_id=customer_preferences.session_id
     user_id=customer_preferences.user_id
@@ -174,7 +175,7 @@ def tenantMatching(customer_preferences):
     rent=list[budget_category_id-1]
     print(rent[0],rent[1])
     
-    data = get_all_properties_on_tenant_budget_category(tenant_category_id,rent[0],rent[1],city, session_id, user_id)
+    data = get_all_properties_on_tenant_budget_category(tenant_category_id,rent[0],rent[1],city,location_category_id, session_id, user_id)
     #data = None#api.search_properties(customer_preferences, priceRange.index(budget_category_id-1))
     #print(str(data))
     # Sample data (for testing)

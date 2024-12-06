@@ -38,8 +38,8 @@ CREATE TABLE `property_data` (
   `unit_number` INT,
   `prop_cat_id` INT,
   `prop_name` VARCHAR(255),
-  `prop_type` VARCHAR(255),
   `prop_description` VARCHAR(255),
+  `prop_type` VARCHAR(255),
   `no_of_rooms` VARCHAR(255),
   `no_of_baths` VARCHAR(255),
   `rent` INT,
@@ -66,6 +66,7 @@ CREATE TABLE `property_media` (
 CREATE TABLE `location` (
   `id` INT PRIMARY KEY AUTO_INCREMENT,
   `unit_id` INT,
+  `location_cat_id` INT,
   `apt_unit_number` VARCHAR(50) NOT NULL,
   `street_name` VARCHAR(255) NOT NULL,
   `community` VARCHAR(255),
@@ -174,6 +175,18 @@ VALUES
   (2, '1-bedroom apartment'),
   (3, '2-bedroom apartment'),
   (4, '3-bedroom apartment');
+  
+  -- Create location Category Table
+CREATE TABLE `location_category` (
+  `location_cat_id` INT PRIMARY KEY,
+  `location_category` VARCHAR(255)
+);
+  -- Insert static data for location categories
+INSERT INTO `location_category` (`location_cat_id`, `location_category`) 
+VALUES 
+  (1, 'Downtown'),
+  (2, 'Suburb'),
+  (3, 'Rural');
 
 
 
