@@ -29,17 +29,21 @@ def get_properties_by_category(db: Session, category_id: int):
     return db.query(PropertyData).filter(PropertyData.prop_cat_id == category_id).all()
 
 
-def get_all_properties_on_tenant_budget_category(tenant_cat_id: int, min_rent: float, max_rent: float, city:str):
+def get_all_properties_on_tenant_budget_category(
+    tenant_cat_id: int, min_rent: float, max_rent: float, city: str, session_id=None, user_id=None
+):
     # Initialize the database session
     db = SessionLocal()
-    
+
     # Access the cache
     cache = DataCache()
+
     # Fetch preferred property categories for the specified tenant category ID
     preferred_properties = cache.get_preferred_properties(tenant_cat_id)
-    print(f"The preferred_properties  are: {preferred_properties} and city: {city}")
+    print(f"The preferred properties are: {preferred_properties} and city: {city} and min and max {min_rent} and {max_rent} ")
+
     try:
-        # Query PropertyData with preferred property categories and rent range filters
+        # Query PropertyData with filters and relationships
         results = db.query(PropertyData).join(Location).options(
             joinedload(PropertyData.location),  # Eager load location
             joinedload(PropertyData.amenities),
@@ -47,14 +51,30 @@ def get_all_properties_on_tenant_budget_category(tenant_cat_id: int, min_rent: f
         ).filter(
             and_(
                 PropertyData.prop_cat_id.in_(preferred_properties),
-                Location.city == city,  # Use Location.city to filter by city
+                Location.city == city,
                 PropertyData.rent >= min_rent,
                 PropertyData.rent <= max_rent
             )
         ).all()
-   
-        # Flatten each property using the to_flat_dict method
-        response = [property.to_flat_dict() for property in results]
+
+        # Fetch tenant actions if user_id or session_id is provided
+        tenant_actions_query = db.query(TenantActions).join(TenantPreferenceDetails)
+
+        if user_id:
+            tenant_actions_query = tenant_actions_query.filter(TenantPreferenceDetails.user_id == user_id)
+        elif session_id:
+            tenant_actions_query = tenant_actions_query.filter(TenantPreferenceDetails.session_id == session_id)
+
+        tenant_actions = tenant_actions_query.all()
+        tenant_actions_dict = {action.unit_id: action.to_dict() for action in tenant_actions}
+
+        # Flatten properties and include TenantActions if available
+        response = []
+        for property in results:
+            property_dict = property.to_flat_dict()
+            if property.unit_id in tenant_actions_dict:
+                property_dict["tenant_actions"] = tenant_actions_dict[property.unit_id]
+            response.append(property_dict)
 
     except Exception as e:
         # Optional: Log or handle the error as needed
@@ -64,8 +84,10 @@ def get_all_properties_on_tenant_budget_category(tenant_cat_id: int, min_rent: f
     finally:
         # Close the database session
         db.close()
+
     
     return response
+
 
 
 def get_tenant_preferred_properties(db: Session, tenant_category_id: int):
@@ -76,7 +98,7 @@ def get_price_range(city: String, tenant_category_id: int):
     db = SessionLocal()
     
     try:
-        return get_price_range_for_tenant_category(db, tenant_category_id)
+        return get_price_range_for_tenant_category_and_city(db, tenant_category_id, city)
         # return {"min_rent": min_rent, "max_rent": max_rent}
     finally:
         db.close()

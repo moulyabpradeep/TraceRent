@@ -163,75 +163,27 @@ def tenantMatching(customer_preferences):
     tenant_category_id = customer_preferences.tenant_category_id
     budget_category_id = customer_preferences.budget_category_id
     city = customer_preferences.city
+    session_id=customer_preferences.session_id
+    user_id=customer_preferences.user_id
 
     # Accessing properties using the section names
     # TODO: Dont call db again please, take this input from ui, ui has this value
-    priceRange = get_price_range(city, tenant_category_id)
-    data = get_all_properties_on_tenant_budget_category(tenant_category_id,priceRange[0],priceRange[1],city)
-    #data = None#api.search_properties(customer_preferences, priceRange.index(budget_category_id-1))
+    price_range = get_price_range(city, tenant_category_id)
+    # Fetch the price ranges using the provided price range and city
+    list = impl.get_price_ranges(price_range)
+    rent=list[budget_category_id-1]
+    print(rent[0],rent[1])
     
+    data = get_all_properties_on_tenant_budget_category(tenant_category_id,rent[0],rent[1],city, session_id, user_id)
+    #data = None#api.search_properties(customer_preferences, priceRange.index(budget_category_id-1))
+    #print(str(data))
     # Sample data (for testing)
-    """data = [
-    PropertyObject(
-        rent=1500,
-        property_coordinates=(42.333, -43.67),
-        school_proximity=5,
-        hospital_proximity=3,
-        transit_proximity=4,
-        in_house_laundry=True,
-        gym=True,
-        pet_friendly=False,
-        pool=True,
-    ),
-    PropertyObject(
-        rent=1200,
-        property_coordinates=(49.6945782, -112.8331033),
-        school_proximity=2,
-        hospital_proximity=4,
-        transit_proximity=5,
-        in_house_laundry=False,
-        gym=True,
-        pet_friendly=True,
-        pool=False
-    ),
-    PropertyObject(
-        rent=2000,
-        property_coordinates=(82.333, -93.67),
-        school_proximity=1000000000,
-        hospital_proximity=2000000,
-        transit_proximity=3000000,
-        in_house_laundry=True,
-        gym=False,
-        pet_friendly=True,
-        pool=True
-    ),
-    PropertyObject(
-        rent=1000,
-        property_coordinates=(72.333, -33.67),
-        school_proximity=30000,
-        hospital_proximity=50000,
-        transit_proximity=20000,
-        in_house_laundry=False,
-        gym=False,
-        pet_friendly=False,
-        pool=False
-    ),
-    PropertyObject(
-        rent=1800,
-        property_coordinates=(32.333, -33.67),
-        school_proximity=400,
-        hospital_proximity=4000,
-        transit_proximity=50000,
-        in_house_laundry=True,
-        gym=True,
-        pet_friendly=True,
-        pool=True,
-    ),
-    ]"""
+    #bucket_list=data
+    #return bucket_list
 
     if not data:
         return None
-
+    
     max_points = impl.getMaxPoints(customer_preferences)
     print("MAX POINTS: " + str(max_points))
 
@@ -243,8 +195,8 @@ def tenantMatching(customer_preferences):
     final_list = impl.add_percent_close(sorted_property_list, max_points)
 
     bucket_list = impl.categorize_properties_by_percent_close(final_list)
-
     return bucket_list
+
 
 
 #API ROUTES

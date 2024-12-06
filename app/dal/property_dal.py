@@ -32,14 +32,18 @@ def get_all_properties(db: Session):
 
 
 # Get minimum and maximum rent for a given tenant category in a single call
-def get_price_range_for_tenant_category(db: Session, tenant_category_id: int):
+def get_price_range_for_tenant_category_and_city(db: Session, tenant_category_id: int, city_name: str):
     min_rent, max_rent = (
-        db.query(func.min(PropertyData.rent), func.max(PropertyData.rent))
-        .join(
-            TenantPreferredProperties,
-            TenantPreferredProperties.prop_cat_id == PropertyData.prop_cat_id
+        db.query(
+            func.min(PropertyData.rent).label("min_rent"),
+            func.max(PropertyData.rent).label("max_rent")
         )
-        .filter(TenantPreferredProperties.tent_cat_id == tenant_category_id)
+        .join(TenantPreferredProperties, TenantPreferredProperties.prop_cat_id == PropertyData.prop_cat_id)
+        .join(Location, PropertyData.unit_id == Location.unit_id)
+        .filter(
+            TenantPreferredProperties.tent_cat_id == tenant_category_id,
+            Location.city == city_name
+        )
         .first()
     )
     return min_rent, max_rent
