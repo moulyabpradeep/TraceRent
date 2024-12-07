@@ -313,7 +313,7 @@ def divide_range(input_tuple):
 
 
 def getMaxPoints(customer_preferences):
-    points = 10+customer_preferences.school_proximity + customer_preferences.school_proximity + customer_preferences.school_proximity
+    points = 10+customer_preferences.school_proximity + customer_preferences.hospital_proximity + customer_preferences.transit_proximity
 
     if customer_preferences.in_house_laundry is not None and customer_preferences.in_house_laundry is True:
         points += 1

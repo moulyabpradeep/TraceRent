@@ -28,13 +28,23 @@ def get_properties_by_category(db: Session, category_id: int):
     """Retrieve properties by category ID."""
     return db.query(PropertyData).filter(PropertyData.prop_cat_id == category_id).all()
 
+from sqlalchemy import and_
 
-def get_all_properties_on_tenant_budget_category(
-    tenant_cat_id: int, min_rent: float, max_rent: float, city: str, location_cat_id: int,
-    session_id=None, user_id=None):
+def get_all_properties_on_tenant_budget_category(customer_preferences,min_rent: float, max_rent: float):
     # Initialize the database session
     db = SessionLocal()
-
+    
+    tenant_cat_id = customer_preferences.tenant_category_id
+    budget_cat_id = customer_preferences.budget_category_id
+    location_cat_id=customer_preferences.location_category_id
+    city = customer_preferences.city
+    session_id=customer_preferences.session_id
+    user_id=customer_preferences.user_id
+    in_house_laundry=customer_preferences.in_house_laundry
+    gym=customer_preferences.gym
+    pet_friendly=customer_preferences.pet_friendly
+    pool=customer_preferences.pool
+    
     # Access the cache
     cache = DataCache()
 
@@ -44,19 +54,32 @@ def get_all_properties_on_tenant_budget_category(
 
     try:
         # Query PropertyData with filters and relationships
+        
+        # Base filters
+        filters = [
+            PropertyData.prop_cat_id.in_(preferred_properties),
+            Location.city == city,
+            Location.location_cat_id == location_cat_id,
+            PropertyData.rent >= min_rent,
+            PropertyData.rent <= max_rent
+        ]
+
+        # Add amenities filters only if the preference is True
+        if in_house_laundry:
+            filters.append(PropertyData.amenities.has(Amenities.in_house_laundry == True))
+        if gym:
+            filters.append(PropertyData.amenities.has(Amenities.gym == True))
+        if pool:
+            filters.append(PropertyData.amenities.has(Amenities.pool == True))
+        if pet_friendly:
+            filters.append(PropertyData.amenities.has(Amenities.pet_friendly == True))
+
+        # Execute query with dynamic filters
         results = db.query(PropertyData).join(Location).options(
             joinedload(PropertyData.location),  # Eager load location
-            joinedload(PropertyData.amenities),
-            subqueryload(PropertyData.property_media)  # Eager load PropertyMedia (one-to-many)
-        ).filter(
-            and_(
-                PropertyData.prop_cat_id.in_(preferred_properties),
-                Location.city == city,
-                Location.location_cat_id == location_cat_id,
-                PropertyData.rent >= min_rent,
-                PropertyData.rent <= max_rent
-            )
-        ).all()
+            joinedload(PropertyData.amenities),  # Eager load amenities
+            subqueryload(PropertyData.property_media)  # Eager load property media
+        ).filter(and_(*filters)).all()
 
         # Fetch tenant actions if user_id or session_id is provided
         tenant_actions_query = db.query(TenantActions).join(TenantPreferenceDetails)
