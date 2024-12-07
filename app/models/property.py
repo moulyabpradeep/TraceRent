@@ -94,6 +94,7 @@ class Location(Base):
     zip_code = Column(String(255))
     latitude = Column(Numeric(10, 7))
     longitude = Column(Numeric(10, 7))
+    location_cat_id=Column(Integer)
     school_proximity=Column(Integer)
     transit_proximity=Column(Integer)
     hospital_proximity=Column(Integer)
@@ -112,6 +113,7 @@ class Location(Base):
             "zip_code":self.zip_code,
             "latitude": self.latitude,
             "longitude": self.longitude,
+            "location_cat_id":self.location_cat_id,
             "school_proximity":self.school_proximity,
             "transit_proximity":self.transit_proximity,
             "hospital_proximity":self.hospital_proximity
@@ -127,6 +129,8 @@ class PropertyData(Base):
     prop_name = Column(String(255))
     prop_type = Column(String(255))
     no_of_rooms = Column(String(255))
+    no_of_baths = Column(String(255))
+    prop_description = Column(String(255))
     rent = Column(Numeric(10, 2))
     area_sq_ft = Column(Numeric(10, 2))
     lease_length = Column(String(255))
@@ -149,12 +153,16 @@ class PropertyData(Base):
             "prop_name": self.prop_name,
             "prop_type": self.prop_type,
             "no_of_rooms": self.no_of_rooms,
+            "no_of_baths": self.no_of_baths,
+            "prop_description": self.prop_description,
             "rent": self.rent,
             "area_sq_ft": self.area_sq_ft,
             "lease_length": self.lease_length,
             **(self.location.to_dict() if self.location else {}),
-            **(self.amenities.to_dict() if self.amenities else {})
-        }
+            **(self.amenities.to_dict() if self.amenities else {}),
+            "property_media": [media.to_dict() for media in self.property_media] if self.property_media else []
+    }
+        
     
     def to_dict(self):        
         return {
@@ -163,6 +171,8 @@ class PropertyData(Base):
             "prop_name": self.prop_name,
             "prop_type": self.prop_type,
             "no_of_rooms": self.no_of_rooms,
+            "no_of_baths": self.no_of_baths,
+            "prop_description": self.prop_description,
             "rent": str(self.rent),
             "area_sq_ft": str(self.area_sq_ft),
             "lease_length": self.lease_length,

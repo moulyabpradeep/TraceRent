@@ -32,14 +32,18 @@ def get_all_properties(db: Session):
 
 
 # Get minimum and maximum rent for a given tenant category in a single call
-def get_price_range_for_tenant_category(db: Session, tenant_category_id: int):
+def get_price_range_for_tenant_category_and_city(db: Session, tenant_category_id: int, city_name: str):
     min_rent, max_rent = (
-        db.query(func.min(PropertyData.rent), func.max(PropertyData.rent))
-        .join(
-            TenantPreferredProperties,
-            TenantPreferredProperties.prop_cat_id == PropertyData.prop_cat_id
+        db.query(
+            func.min(PropertyData.rent).label("min_rent"),
+            func.max(PropertyData.rent).label("max_rent")
         )
-        .filter(TenantPreferredProperties.tent_cat_id == tenant_category_id)
+        .join(TenantPreferredProperties, TenantPreferredProperties.prop_cat_id == PropertyData.prop_cat_id)
+        .join(Location, PropertyData.unit_id == Location.unit_id)
+        .filter(
+            TenantPreferredProperties.tent_cat_id == tenant_category_id,
+            Location.city == city_name
+        )
         .first()
     )
     return min_rent, max_rent
@@ -80,29 +84,39 @@ def get_all_properties_by_unit_ids(db: Session,unit_ids: list):
 
 
 
-def get_properties_by_tenant_action_filter(db, user_id, filter_type: TenantActionFilterType):
-    # Initialize the query
+def get_properties_by_tenant_action_filter(db, user_id,session_id, filter_type: TenantActionFilterType):
+    # Initialize the base query
     query = db.query(TenantPreferenceDetails).options(
-        # Eager load tenant_actions
+        # Eager load tenant_actions and its relationships
         joinedload(TenantPreferenceDetails.tenant_actions)
-        .joinedload(TenantActions.property_data)  # Eager load PropertyData
+        .joinedload(TenantActions.property_data)
         .options(
             joinedload(PropertyData.location),  # Eager load Location (one-to-one)
             joinedload(PropertyData.amenities),  # Eager load Amenities (one-to-one)
-            joinedload(PropertyData.property_owner_info),  # Eager load propertyOwnerInfo (one-to-one)
+            joinedload(PropertyData.property_owner_info),  # Eager load PropertyOwnerInfo (one-to-one)
             subqueryload(PropertyData.property_media)  # Eager load PropertyMedia (one-to-many)
         )
-    ).filter(TenantPreferenceDetails.user_id == user_id)  # Filter by user_id
+    )
+
+    # Apply filter for user_id or session_id
+    if user_id:
+        query = query.filter(TenantPreferenceDetails.user_id == user_id)
+    elif session_id:
+        query = query.filter(TenantPreferenceDetails.session_id == session_id)
+    else:
+        raise ValueError("Either user_id or session_id must be provided.")
 
     # Apply the dynamic filter based on filter_type
-    if filter_type.upper() == "LIKED":
-        query = query.filter(TenantActions.is_liked == True)  # Filter for liked properties
-    elif filter_type.upper() == "DISLIKED":
-        query = query.filter(TenantActions.is_liked == False)  # Filter for disliked properties
-    elif filter_type.upper() == "CONTACTED":
-        query = query.filter(TenantActions.is_contacted == True)  # Filter for contacted properties
-    
-    # Execute the query and return the results
+    if filter_type:
+        filter_type = filter_type.upper()
+        if filter_type == "LIKED":
+            query = query.filter(TenantActions.is_liked == True)  # Filter for liked properties
+        elif filter_type == "DISLIKED":
+            query = query.filter(TenantActions.is_liked == False)  # Filter for disliked properties
+        elif filter_type == "CONTACTED":
+            query = query.filter(TenantActions.is_contacted == True)  # Filter for contacted properties
+
+    # Execute the query and fetch results
     tenant_preferences = query.all()
 
     # Convert results to dictionary format

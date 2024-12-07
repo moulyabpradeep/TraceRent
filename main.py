@@ -162,89 +162,42 @@ def tenantMatching(customer_preferences):
     bucket_list = None
     tenant_category_id = customer_preferences.tenant_category_id
     budget_category_id = customer_preferences.budget_category_id
+    location_category_id=customer_preferences.location_category_id
     city = customer_preferences.city
+    session_id=customer_preferences.session_id
+    user_id=customer_preferences.user_id
 
     # Accessing properties using the section names
     # TODO: Dont call db again please, take this input from ui, ui has this value
-    priceRange = get_price_range(city, tenant_category_id)
-    data = get_all_properties_on_tenant_budget_category(tenant_category_id,priceRange[0],priceRange[1])
+    price_range = get_price_range(city, tenant_category_id)
+    # Fetch the price ranges using the provided price range and city
+    list = impl.get_price_ranges(price_range)
+    rent=list[budget_category_id-1]
+    print(rent[0],rent[1])
+    
+    data = get_all_properties_on_tenant_budget_category(customer_preferences,rent[0],rent[1])
     #data = None#api.search_properties(customer_preferences, priceRange.index(budget_category_id-1))
-    print(data)
+    #print(str(data))
     # Sample data (for testing)
-    """data = [
-    PropertyObject(
-        rent=1500,
-        property_coordinates=(42.333, -43.67),
-        school_proximity=5,
-        hospital_proximity=3,
-        transit_proximity=4,
-        in_house_laundry=True,
-        gym=True,
-        pet_friendly=False,
-        pool=True,
-    ),
-    PropertyObject(
-        rent=1200,
-        property_coordinates=(49.6945782, -112.8331033),
-        school_proximity=2,
-        hospital_proximity=4,
-        transit_proximity=5,
-        in_house_laundry=False,
-        gym=True,
-        pet_friendly=True,
-        pool=False
-    ),
-    PropertyObject(
-        rent=2000,
-        property_coordinates=(82.333, -93.67),
-        school_proximity=1000000000,
-        hospital_proximity=2000000,
-        transit_proximity=3000000,
-        in_house_laundry=True,
-        gym=False,
-        pet_friendly=True,
-        pool=True
-    ),
-    PropertyObject(
-        rent=1000,
-        property_coordinates=(72.333, -33.67),
-        school_proximity=30000,
-        hospital_proximity=50000,
-        transit_proximity=20000,
-        in_house_laundry=False,
-        gym=False,
-        pet_friendly=False,
-        pool=False
-    ),
-    PropertyObject(
-        rent=1800,
-        property_coordinates=(32.333, -33.67),
-        school_proximity=400,
-        hospital_proximity=4000,
-        transit_proximity=50000,
-        in_house_laundry=True,
-        gym=True,
-        pet_friendly=True,
-        pool=True,
-    ),
-    ]"""
+    #bucket_list=data
+    #return bucket_list
 
     if not data:
         return None
-
+    
     max_points = impl.getMaxPoints(customer_preferences)
     print("MAX POINTS: " + str(max_points))
 
     sorted_property_list = impl.assign_and_sort_property_list(data, customer_preferences, city, max_points)
 
-    for property_obj in sorted_property_list:
-        print(f"Property Price: {property_obj['rent']}, Points: {property_obj['points']}")
+    #for property_obj in sorted_property_list:
+        #print(f"Property Price: {property_obj['rent']}, Points: {property_obj['points']}")
 
     final_list = impl.add_percent_close(sorted_property_list, max_points)
 
     bucket_list = impl.categorize_properties_by_percent_close(final_list)
-
     return bucket_list
+
 
 
 #API ROUTES
@@ -254,7 +207,7 @@ def tenantMatching(customer_preferences):
 def tenant_matching_api():
     # Get the JSON request body as a dictionary
     requestJSON = request.json
-
+    
     # Parse the JSON into a UserPreferences object
     customer_preferences = DAOs.UserPreferences.from_json(requestJSON)
     result = tenantMatching(customer_preferences)
@@ -479,7 +432,7 @@ def like_dislike_property():
 def get_liked_properties():
     try:
         data = request.json
-        print(data)
+        
         if data is None:
             logger.warning("No data received for property rating.")
             return create_rating_standard_response(success=False, message=const.NO_DATA_MSG,
@@ -487,7 +440,7 @@ def get_liked_properties():
         # TODO: Replace `[]` with actual database method call to fetch liked properties as a JSON array
         filter = const.LIKED_FILTER
         liked_properties = []
-        liked_properties = get_properties_by_action(data.get("user_id"), filter)
+        liked_properties = get_properties_by_action(data.get("user_id"),data.get("session_id"), filter)
         
         
         if liked_properties:
@@ -528,7 +481,7 @@ def get_disliked_properties():
         # TODO: Replace `[]` with actual database method call to fetch diliked properties as a JSON array
         filter = const.DISLIKED_FILTER
         disliked_properties = []
-        disliked_properties = get_properties_by_action(data.get("user_id"), filter)
+        disliked_properties = get_properties_by_action(data.get("user_id"),data.get("session_id"), filter)
 
         if disliked_properties:
             logger.info("Disliked properties fetched successfully.")
@@ -567,7 +520,7 @@ def get_contacted_properties():
         # TODO: Replace `[]` with actual database method call to fetch contacted properties as a JSON array
         contacted_properties = []
         filter = const.CONTACTED_FILTER
-        contacted_properties = get_properties_by_action(data.get("user_id"), filter)
+        contacted_properties = get_properties_by_action(data.get("user_id"),data.get("session_id"), filter)
 
         if contacted_properties:
             logger.info("Contacted properties fetched successfully.")
@@ -659,7 +612,7 @@ def contact_now():
 def get_property_details_api():
     try:
         data = request.json
-        print(data)
+       
         if data is None:
             logger.warning("No data received for property details.")
             return create_standard_response(
@@ -759,7 +712,7 @@ def update_user_info_api():
 #uncomment for api testing
 if __name__ == '__main__':
     main()
-    app.run(debug=True)
+    app.run(debug=True, port=8080)
 
 
 #uncomment for local testing

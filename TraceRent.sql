@@ -4,10 +4,10 @@ USE trace_rent_ai;
 
 CREATE TABLE `user` (
   `user_id` INT PRIMARY KEY AUTO_INCREMENT,
-  `username` VARCHAR(255),
+  `username` VARCHAR(255) UNIQUE,
   `password` VARCHAR(255),
   `name` VARCHAR(255),
-  `email` VARCHAR(255),
+  `email` VARCHAR(255) UNIQUE,
   `phone` VARCHAR(15)
 );
 
@@ -26,6 +26,7 @@ CREATE TABLE `property_category` (
 
 -- Create Tenant Preferred Properties Table
 CREATE TABLE `tenant_preferred_properties` (
+  `id` INT PRIMARY KEY AUTO_INCREMENT,
   `tent_cat_id` INT,
   `prop_cat_id` INT,
   FOREIGN KEY (`tent_cat_id`) REFERENCES `tenant_category` (`tent_cat_id`),
@@ -37,31 +38,47 @@ CREATE TABLE `property_data` (
   `unit_number` INT,
   `prop_cat_id` INT,
   `prop_name` VARCHAR(255),
+  `prop_description` VARCHAR(255),
   `prop_type` VARCHAR(255),
   `no_of_rooms` VARCHAR(255),
-  `area_code` VARCHAR(255),
-  `province` VARCHAR(255),
-  `country` VARCHAR(255),
-  `address` VARCHAR(255),
-  `rent` DECIMAL(10, 2),
+  `no_of_baths` VARCHAR(255),
+  `rent` INT,
+  `area_sq_ft` DECIMAL(10, 2),
   `lease_length` VARCHAR(255),
   FOREIGN KEY (`prop_cat_id`) 
     REFERENCES `property_category` (`prop_cat_id`) 
     ON DELETE CASCADE  -- Add this line for cascading delete
 );
 
+CREATE TABLE `property_media` (
+  `media_id` INT AUTO_INCREMENT PRIMARY KEY,
+  `unit_id` INT,  -- Foreign Key referencing property_data
+  `category` ENUM('front', 'living_room', 'bedroom', 'kitchen', 'bathroom', 'balcony', 'garden', 'backyard', 'pool', 'misc') DEFAULT 'front' NOT NULL,
+  `photo_url` VARCHAR(255) NOT NULL,  -- URL for the photo
+  `sequence` INT NOT NULL,  -- Sequence of the photo within the category
+  FOREIGN KEY (`unit_id`) 
+    REFERENCES `property_data` (`unit_id`) 
+    ON DELETE CASCADE
+);
+
+
 -- Create Location Table
 CREATE TABLE `location` (
   `id` INT PRIMARY KEY AUTO_INCREMENT,
   `unit_id` INT,
-  `apt_unit_number` VARCHAR(50),
-  `street_name` VARCHAR(255),
+  `location_cat_id` INT,
+  `apt_unit_number` VARCHAR(50) NOT NULL,
+  `street_name` VARCHAR(255) NOT NULL,
   `community` VARCHAR(255),
-  `city` VARCHAR(255),
+  `city` VARCHAR(255) NOT NULL,
   `province` VARCHAR(255),
   `country` VARCHAR(255),
-  `latitude` VARCHAR(50),
-  `longitude` VARCHAR(50),
+  `zip_code` VARCHAR(255),
+  `latitude` DECIMAL(10,7) NOT NULL,
+  `longitude` DECIMAL(10,7) NOT NULL,
+  `school_proximity` INT NOT NULL, -- in METERS
+  `transit_proximity` INT NOT NULL, -- in METERS
+  `hospital_proximity` INT NOT NULL, -- in METERS
   FOREIGN KEY (`unit_id`) 
     REFERENCES `property_data` (`unit_id`) 
     ON DELETE CASCADE  -- Add this line for cascading delete
@@ -72,17 +89,17 @@ CREATE TABLE `location` (
 CREATE TABLE `amenities` (
   `id` INT PRIMARY KEY AUTO_INCREMENT,
   `unit_id` INT,
-  `accessibility` VARCHAR(255),
   `parking` INT,
-  `gym` BOOLEAN,
-  `kids_playarea` BOOLEAN,
-  `party_hall` BOOLEAN,
-  `backyard` BOOLEAN,
-  `deck` BOOLEAN,
-  `in_house_laundry` BOOLEAN,
-  `visitor_parking` BOOLEAN,
-  `pool` BOOLEAN,
-  `pet_friendly` BOOLEAN,
+  `wheelchair_accessibility` BOOLEAN DEFAULT 0,
+  `gym` BOOLEAN DEFAULT 0,
+  `kids_playarea` BOOLEAN DEFAULT 0,
+  `party_hall` BOOLEAN DEFAULT 0,
+  `backyard` BOOLEAN DEFAULT 0,
+  `deck` BOOLEAN DEFAULT 0,
+  `in_house_laundry` BOOLEAN DEFAULT 0,
+  `visitor_parking` BOOLEAN DEFAULT 0,
+  `pool` BOOLEAN DEFAULT 0,
+  `pet_friendly` BOOLEAN DEFAULT 0,
  FOREIGN KEY (`unit_id`) 
     REFERENCES `property_data` (`unit_id`) 
     ON DELETE CASCADE  -- Add this line for cascading delete
@@ -113,8 +130,7 @@ CREATE TABLE `tenant_preference_details` (
   `pet_friendly` BOOLEAN,
   `pool` BOOLEAN,
   `is_logged_in` BOOLEAN,
-  FOREIGN KEY (`tenant_category_id`) REFERENCES `tenant_category` (`tent_cat_id`),
-  CONSTRAINT unique_user_session UNIQUE (`user_id`, `session_id`)
+  FOREIGN KEY (`tenant_category_id`) REFERENCES `tenant_category` (`tent_cat_id`)
 );
 
 -- Optional index on `user_id` for faster lookups by user
@@ -125,11 +141,22 @@ CREATE TABLE `tenant_actions` (
   `action_id` INT AUTO_INCREMENT PRIMARY KEY,
   `tenant_preference_details_id` INT,
   `unit_id` INT,
-  `is_viewed` BOOLEAN DEFAULT FALSE,
-  `is_liked` BOOLEAN DEFAULT FALSE,
-  `is_contacted` BOOLEAN DEFAULT FALSE,
+  `is_liked` BOOLEAN DEFAULT NULL,    -- NULL for neutral, TRUE for liked, FALSE for disliked
+  `is_contacted` BOOLEAN DEFAULT NULL,
   FOREIGN KEY (`tenant_preference_details_id`) REFERENCES `tenant_preference_details` (`id`),
   FOREIGN KEY (`unit_id`) REFERENCES `property_data` (`unit_id`) ON DELETE CASCADE
+);
+
+CREATE TABLE property_owner_info (
+    owner_id INT AUTO_INCREMENT PRIMARY KEY,
+    unit_id INT NOT NULL,
+    first_name VARCHAR(50) NOT NULL,
+    last_name VARCHAR(50) NOT NULL,
+    email VARCHAR(100),
+    phone VARCHAR(15),
+    address VARCHAR(255),
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (unit_id) REFERENCES property_data(unit_id) ON DELETE CASCADE
 );
 
 
@@ -148,6 +175,18 @@ VALUES
   (2, '1-bedroom apartment'),
   (3, '2-bedroom apartment'),
   (4, '3-bedroom apartment');
+  
+  -- Create location Category Table
+CREATE TABLE `location_category` (
+  `location_cat_id` INT PRIMARY KEY,
+  `location_category` VARCHAR(255)
+);
+  -- Insert static data for location categories
+INSERT INTO `location_category` (`location_cat_id`, `location_category`) 
+VALUES 
+  (1, 'Downtown'),
+  (2, 'Suburb'),
+  (3, 'Rural');
 
 
 
